@@ -1,0 +1,603 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hypnotic Echo Visualizer</title>
+    <!-- Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --bg-color: #050505;
+            --text-color: #888;
+            --accent-color: #5d4d7a;
+            --highlight-color: #bfa3ff;
+            --panel-bg: rgba(20, 20, 20, 0.75);
+        }
+
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow: hidden;
+            user-select: none;
+        }
+
+        /* --- VISUALIZER CANVAS --- */
+        #visualizer {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            cursor: pointer; /* Indicates clickable background */
+        }
+
+        /* --- UI CONTAINER --- */
+        #app-container {
+            position: relative;
+            z-index: 10;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            pointer-events: none; /* Let clicks pass through to canvas if not on card */
+            transition: opacity 0.5s ease;
+        }
+
+        #app-container.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        /* --- CONTROL CARD --- */
+        .control-card {
+            background: var(--panel-bg);
+            border: 1px solid #333;
+            border-radius: 20px;
+            padding: 30px;
+            width: 90%;
+            max-width: 450px;
+            box-shadow: 0 0 40px rgba(0,0,0,0.9);
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            text-align: center;
+            pointer-events: auto; /* Re-enable clicks on the card */
+            backdrop-filter: blur(10px);
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        /* Scrollbar for card */
+        .control-card::-webkit-scrollbar { width: 4px; }
+        .control-card::-webkit-scrollbar-track { background: transparent; }
+        .control-card::-webkit-scrollbar-thumb { background: #444; border-radius: 2px; }
+
+        h2 {
+            margin: 0;
+            color: var(--highlight-color);
+            font-weight: 300;
+            letter-spacing: 1px;
+            font-size: 1.5rem;
+        }
+
+        h3 {
+            margin: 10px 0 5px 0;
+            color: #ddd;
+            font-size: 1rem;
+            font-weight: 400;
+            border-bottom: 1px solid #333;
+            padding-bottom: 5px;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 5px 12px;
+            border-radius: 15px;
+            background: rgba(255, 255, 255, 0.05);
+            font-size: 0.8rem;
+            margin-bottom: 5px;
+        }
+        
+        .status-badge.active { color: #bfa3ff; border: 1px solid #5d4d7a; }
+        .status-badge.recording { color: #ff6b6b; border: 1px solid #ff6b6b; animation: pulse 1.5s infinite; }
+
+        @keyframes pulse { 0% { opacity: 0.6; } 50% { opacity: 1; } 100% { opacity: 0.6; } }
+
+        /* --- SLIDERS --- */
+        .slider-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            margin-bottom: 10px;
+            text-align: left;
+        }
+
+        .slider-label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.85rem;
+            color: #aaa;
+        }
+
+        input[type=range] {
+            -webkit-appearance: none;
+            width: 100%;
+            background: transparent;
+            margin: 5px 0;
+        }
+
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 14px;
+            width: 14px;
+            border-radius: 50%;
+            background: var(--highlight-color);
+            margin-top: -5px;
+            cursor: pointer;
+            box-shadow: 0 0 10px var(--accent-color);
+        }
+
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 4px;
+            cursor: pointer;
+            background: #333;
+            border-radius: 2px;
+        }
+
+        /* --- TOGGLES --- */
+        .toggle-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(0,0,0,0.2);
+            padding: 10px;
+            border-radius: 8px;
+            margin-bottom: 5px;
+        }
+
+        .toggle-label { font-size: 0.9rem; color: #ccc; }
+
+        /* Switch Styling */
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 40px;
+            height: 20px;
+        }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: #333;
+            transition: .4s;
+            border-radius: 20px;
+        }
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 14px;
+            width: 14px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+        input:checked + .slider { background-color: var(--accent-color); }
+        input:checked + .slider:before { transform: translateX(20px); }
+
+        .hint {
+            font-size: 0.75rem;
+            color: #555;
+            margin-top: 10px;
+        }
+
+        /* --- START OVERLAY --- */
+        #start-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #000;
+            z-index: 100;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+        }
+        
+        #start-overlay h1 { color: var(--highlight-color); font-weight: 300; letter-spacing: 2px; }
+        #start-overlay p { margin-top: 10px; color: #666; }
+        #start-overlay i { margin-top: 20px; font-size: 2rem; color: #444; }
+
+    </style>
+</head>
+<body>
+
+    <!-- VISUALIZER BACKGROUND -->
+    <canvas id="visualizer"></canvas>
+
+    <!-- START SCREEN -->
+    <div id="start-overlay">
+        <h1>Echo Visualizer</h1>
+        <p>Click anywhere to Initialize</p>
+        <i class="fa-solid fa-microphone-lines"></i>
+    </div>
+
+    <!-- MAIN UI -->
+    <div id="app-container" style="display:none;">
+        <div class="control-card" id="main-card">
+            
+            <div>
+                <h2>Controls</h2>
+                <div id="status-text" class="status-badge">Waiting...</div>
+            </div>
+
+            <!-- Visuals Section -->
+            <h3>Visuals</h3>
+            <div class="slider-group">
+                <div class="slider-label"><span>Mic Sensitivity</span><i class="fa-solid fa-ear-listen"></i></div>
+                <input type="range" id="sensitivity-slider" min="0.5" max="5" step="0.1" value="2.0">
+            </div>
+            <div class="slider-group">
+                <div class="slider-label"><span>Smoothness</span><i class="fa-solid fa-water"></i></div>
+                <input type="range" id="smoothing-slider" min="0.1" max="0.95" step="0.01" value="0.85">
+            </div>
+
+            <!-- Echo Section -->
+            <h3>Echo FX</h3>
+            
+            <div class="toggle-row">
+                <span class="toggle-label"><i class="fa-solid fa-power-off"></i> Enable Echo</span>
+                <label class="switch">
+                    <input type="checkbox" id="echo-toggle">
+                    <span class="slider"></span>
+                </label>
+            </div>
+
+            <div class="slider-group">
+                <div class="slider-label"><span>Gate Threshold (Trigger Volume)</span><i class="fa-solid fa-door-open"></i></div>
+                <input type="range" id="gate-slider" min="0" max="0.5" step="0.01" value="0.05">
+            </div>
+
+            <div class="slider-group">
+                <div class="slider-label"><span>Delay Time (Seconds)</span><i class="fa-solid fa-clock"></i></div>
+                <input type="range" id="delay-slider" min="0.1" max="3" step="0.1" value="1.0">
+                <div class="slider-label" style="justify-content: flex-end; font-size: 0.7rem;"><span id="delay-val">1.0s</span></div>
+            </div>
+
+            <div class="slider-group">
+                <div class="slider-label"><span>Pitch Shift</span><i class="fa-solid fa-music"></i></div>
+                <input type="range" id="pitch-slider" min="-1200" max="1200" step="100" value="0">
+                <div class="slider-label" style="justify-content: flex-end; font-size: 0.7rem;"><span id="pitch-val">Normal</span></div>
+            </div>
+
+            <div class="toggle-row">
+                <span class="toggle-label"><i class="fa-solid fa-dice"></i> Chaos Mode (Random Pitch)</span>
+                <label class="switch">
+                    <input type="checkbox" id="random-pitch-toggle">
+                    <span class="slider"></span>
+                </label>
+            </div>
+
+            <div class="hint">Click background to hide/show this menu</div>
+        </div>
+    </div>
+
+    <script>
+        // --- VARIABLES ---
+        let audioCtx, analyser, micSource, visualGainNode;
+        let scriptNode; // Used for capturing audio for echo
+        let dataArray, canvas, ctx;
+        let isListening = false;
+        
+        // Echo Logic Variables
+        let isEchoEnabled = false;
+        let isRecording = false;
+        let recordedChunks = []; // Temporary buffer during speech
+        let silenceStartTime = 0;
+        let silenceThresholdTime = 500; // ms of silence before processing
+        
+        // DOM Elements
+        const startOverlay = document.getElementById('start-overlay');
+        const appContainer = document.getElementById('app-container');
+        const controlCard = document.getElementById('main-card');
+        const statusText = document.getElementById('status-text');
+        
+        // Inputs
+        const sensSlider = document.getElementById('sensitivity-slider');
+        const smoothSlider = document.getElementById('smoothing-slider');
+        const echoToggle = document.getElementById('echo-toggle');
+        const gateSlider = document.getElementById('gate-slider');
+        const delaySlider = document.getElementById('delay-slider');
+        const delayVal = document.getElementById('delay-val');
+        const pitchSlider = document.getElementById('pitch-slider');
+        const pitchVal = document.getElementById('pitch-val');
+        const randomPitchToggle = document.getElementById('random-pitch-toggle');
+
+        // --- UI INTERACTION ---
+
+        // Toggle UI Visibility on Background Click
+        document.body.addEventListener('click', (e) => {
+            // If we clicked inside the control card or on the start overlay, do nothing
+            if (controlCard.contains(e.target) || startOverlay.contains(e.target)) return;
+
+            // Toggle hidden class
+            if (appContainer.style.display !== 'none') {
+                appContainer.classList.toggle('hidden');
+            }
+        });
+
+        startOverlay.addEventListener('click', async () => {
+            startOverlay.style.display = 'none';
+            appContainer.style.display = 'flex';
+            await initMicrophone();
+        });
+
+        // Update Slider Text Labels
+        delaySlider.oninput = () => delayVal.innerText = delaySlider.value + "s";
+        pitchSlider.oninput = () => {
+            const val = pitchSlider.value;
+            pitchVal.innerText = val == 0 ? "Normal" : (val > 0 ? "+" + val/100 : val/100) + " Semitones";
+        };
+
+        // Update Echo State
+        echoToggle.addEventListener('change', (e) => {
+            isEchoEnabled = e.target.checked;
+            if(!isEchoEnabled) {
+                statusText.innerText = "Listening Active";
+                statusText.className = "status-badge active";
+            }
+        });
+
+        // --- AUDIO ENGINE ---
+
+        async function initMicrophone() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+                
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                
+                // 1. Visualizer Path
+                analyser = audioCtx.createAnalyser();
+                micSource = audioCtx.createMediaStreamSource(stream);
+                visualGainNode = audioCtx.createGain();
+                visualGainNode.gain.value = sensSlider.value;
+
+                micSource.connect(visualGainNode);
+                visualGainNode.connect(analyser);
+
+                // Settings
+                analyser.fftSize = 512;
+                analyser.smoothingTimeConstant = smoothSlider.value;
+                const bufferLength = analyser.frequencyBinCount;
+                dataArray = new Uint8Array(bufferLength);
+
+                // 2. Echo Capture Path (ScriptProcessor)
+                // We use ScriptProcessor because it's the easiest way to do custom "Gate & Record" logic 
+                // in a single file without external worklet files.
+                // bufferSize 4096 gives good balance of performance vs latency for this use case.
+                scriptNode = audioCtx.createScriptProcessor(4096, 1, 1);
+                micSource.connect(scriptNode);
+                scriptNode.connect(audioCtx.destination); // Necessary for script processor to run, but we output silence
+                
+                scriptNode.onaudioprocess = handleAudioProcess;
+
+                // Setup Canvas
+                canvas = document.getElementById('visualizer');
+                ctx = canvas.getContext('2d');
+                window.addEventListener('resize', resizeCanvas);
+                resizeCanvas();
+
+                // Start Loop
+                isListening = true;
+                statusText.innerText = "Listening Active";
+                statusText.classList.add("active");
+                animate();
+
+            } catch (err) {
+                console.error("Mic Error:", err);
+                statusText.innerText = "Access Denied";
+                statusText.classList.add("error");
+            }
+        }
+
+        // --- ECHO LOGIC (GATING & RECORDING) ---
+
+        function handleAudioProcess(audioProcessingEvent) {
+            // Pass silence to output to avoid direct feedback loop
+            const outputBuffer = audioProcessingEvent.outputBuffer;
+            const outputData = outputBuffer.getChannelData(0);
+            for (let i = 0; i < outputBuffer.length; i++) { outputData[i] = 0; }
+
+            if (!isEchoEnabled) return;
+
+            const inputBuffer = audioProcessingEvent.inputBuffer;
+            const inputData = inputBuffer.getChannelData(0);
+
+            // Calculate RMS (Volume)
+            let sum = 0;
+            for (let i = 0; i < inputData.length; i++) {
+                sum += inputData[i] * inputData[i];
+            }
+            const rms = Math.sqrt(sum / inputData.length);
+            const gateThreshold = parseFloat(gateSlider.value);
+
+            // Gating Logic
+            if (rms > gateThreshold) {
+                // Signal detected
+                if (!isRecording) {
+                    isRecording = true;
+                    recordedChunks = [];
+                    statusText.innerText = "Capturing...";
+                    statusText.className = "status-badge recording";
+                }
+                
+                // Copy buffer data to store
+                recordedChunks.push(new Float32Array(inputData));
+                silenceStartTime = 0; // Reset silence timer
+            } else {
+                // Silence detected
+                if (isRecording) {
+                    if (silenceStartTime === 0) silenceStartTime = Date.now();
+                    
+                    // Keep recording the "tail" of the sound for a bit
+                    recordedChunks.push(new Float32Array(inputData));
+
+                    // If silence persists longer than threshold, process the echo
+                    if (Date.now() - silenceStartTime > 200) { 
+                        finishRecordingAndScheduleEcho();
+                    }
+                }
+            }
+        }
+
+        function finishRecordingAndScheduleEcho() {
+            isRecording = false;
+            statusText.innerText = "Echo Pending...";
+            statusText.className = "status-badge active";
+
+            // Flatten chunks into one buffer
+            const totalLength = recordedChunks.reduce((acc, chunk) => acc + chunk.length, 0);
+            const fullBuffer = audioCtx.createBuffer(1, totalLength, audioCtx.sampleRate);
+            const channelData = fullBuffer.getChannelData(0);
+            
+            let offset = 0;
+            recordedChunks.forEach(chunk => {
+                channelData.set(chunk, offset);
+                offset += chunk.length;
+            });
+
+            // Schedule Playback
+            const delayTime = parseFloat(delaySlider.value);
+            playEcho(fullBuffer, delayTime);
+        }
+
+        function playEcho(buffer, delay) {
+            const source = audioCtx.createBufferSource();
+            source.buffer = buffer;
+            
+            // Pitch Shifting Logic
+            let detuneValue = parseInt(pitchSlider.value);
+            
+            if (randomPitchToggle.checked) {
+                // Random between -1200 (1 octave down) and +1200 (1 octave up)
+                detuneValue = (Math.random() * 2400) - 1200;
+            }
+
+            source.detune.value = detuneValue;
+
+            // Connect to destination (speakers)
+            // Create a small gain for the echo so it's not too jarring
+            const echoGain = audioCtx.createGain();
+            echoGain.gain.value = 0.8; 
+
+            source.connect(echoGain);
+            echoGain.connect(audioCtx.destination);
+
+            // Also connect echo to visualizer so we see the echo!
+            echoGain.connect(analyser);
+
+            source.start(audioCtx.currentTime + delay);
+            
+            // Reset text after play
+            setTimeout(() => {
+                if(!isRecording) {
+                    statusText.innerText = "Listening Active";
+                    statusText.className = "status-badge active";
+                }
+            }, delay * 1000 + (buffer.duration * 1000));
+        }
+
+        // --- SLIDER HANDLERS ---
+        sensSlider.addEventListener('input', (e) => {
+            if (visualGainNode) visualGainNode.gain.value = e.target.value;
+        });
+
+        smoothSlider.addEventListener('input', (e) => {
+            if (analyser) analyser.smoothingTimeConstant = parseFloat(e.target.value);
+        });
+
+        // --- VISUALIZER ENGINE (SAME AS BEFORE) ---
+
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+
+        function animate() {
+            if (!isListening) return;
+            requestAnimationFrame(animate);
+
+            analyser.getByteFrequencyData(dataArray);
+
+            const w = canvas.width;
+            const h = canvas.height;
+            const centerX = w / 2;
+            const centerY = h / 2;
+            const radius = Math.min(w, h) / 3;
+
+            // Fade effect
+            ctx.fillStyle = 'rgba(5, 5, 5, 0.2)'; 
+            ctx.fillRect(0, 0, w, h);
+
+            // 1. Bass Pulse
+            let bassSum = 0;
+            for(let i=0; i<20; i++) bassSum += dataArray[i];
+            const bassAvg = bassSum / 20;
+            const pulseSize = radius * (0.8 + (bassAvg / 255) * 0.4);
+
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, pulseSize, 0, 2 * Math.PI);
+            ctx.fillStyle = `rgba(30, 20, 50, ${Math.max(0.1, bassAvg/300)})`;
+            ctx.fill();
+
+            // 2. Circular Frequency Bars
+            const bars = 100;
+            const step = (Math.PI * 2) / bars;
+
+            for (let i = 0; i < bars; i++) {
+                const dataIndex = Math.floor(i * (dataArray.length / 1.5) / bars);
+                const value = dataArray[dataIndex];
+                
+                const barHeight = (value / 255) * (Math.min(w,h) / 2.5);
+                const hue = 250 + (i / bars) * 60; 
+                const light = 30 + (value / 255) * 40;
+
+                ctx.save();
+                ctx.translate(centerX, centerY);
+                ctx.rotate(i * step);
+
+                ctx.beginPath();
+                ctx.moveTo(0, pulseSize - 10); 
+                ctx.lineTo(0, pulseSize + barHeight);
+                
+                ctx.strokeStyle = `hsl(${hue}, 70%, ${light}%)`;
+                ctx.lineWidth = 4;
+                ctx.lineCap = 'round';
+                ctx.stroke();
+
+                ctx.beginPath();
+                ctx.moveTo(0, pulseSize - 20);
+                ctx.lineTo(0, pulseSize - 20 - (barHeight * 0.2));
+                ctx.strokeStyle = `rgba(255, 255, 255, 0.1)`;
+                ctx.stroke();
+
+                ctx.restore();
+            }
+        }
+    </script>
+</body>
+</html>
