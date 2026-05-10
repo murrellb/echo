@@ -1,0 +1,607 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vocal Pitch EKG Trainer - Pro</title>
+    <style>
+        :root {
+            --bg-center: #162238;
+            --bg-edge: #020617;
+            --panel: rgba(15, 23, 42, 0.85);
+            --text: #f8fafc;
+            --primary: #3b82f6;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --target: #00f3ff;
+            --user-pitch: #ff003c;
+            --grid: rgba(255, 255, 255, 0.07);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Roboto, Helvetica, sans-serif; }
+
+        body {
+            background: radial-gradient(circle at center, var(--bg-center) 0%, var(--bg-edge) 100%);
+            color: var(--text);
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        header {
+            text-align: center;
+            padding: 15px;
+            background: rgba(2, 6, 23, 0.7);
+            border-bottom: 1px solid rgba(0, 243, 255, 0.2);
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+            z-index: 10;
+            position: relative;
+        }
+
+        h1 { font-size: 1.6rem; margin-bottom: 5px; text-shadow: 0 0 10px rgba(255,255,255,0.2); }
+        p.subtitle { font-size: 0.95rem; color: #94a3b8; }
+
+        .headphones-badge {
+            display: inline-block; background: rgba(59, 130, 246, 0.2); border: 1px solid var(--primary);
+            color: #93c5fd; font-size: 0.8rem; padding: 3px 8px; border-radius: 12px;
+            margin-top: 8px; font-weight: bold;
+        }
+
+        #setup-screen, #game-screen { flex: 1; display: flex; flex-direction: column; }
+        #game-screen { display: none; position: relative; }
+
+        .container {
+            max-width: 600px; margin: auto; background: var(--panel);
+            padding: 30px; border-radius: 12px; box-shadow: 0 15px 40px rgba(0,0,0,0.9); width: 90%;
+            border: 1px solid rgba(255,255,255,0.1);
+            backdrop-filter: blur(10px);
+        }
+
+        .form-group { margin-bottom: 20px; }
+        label { display: block; margin-bottom: 8px; font-weight: 600; color: #cbd5e1; }
+        select, input {
+            width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #475569;
+            background: #020617; color: white; font-size: 1rem; outline: none;
+        }
+        select:focus { border-color: var(--target); }
+
+        .btn {
+            width: 100%; padding: 14px; border: none; border-radius: 6px;
+            background: linear-gradient(45deg, #2563eb, #3b82f6); color: white; font-size: 1.1rem;
+            font-weight: bold; cursor: pointer; transition: all 0.2s;
+            box-shadow: 0 4px 15px rgba(59, 130, 246, 0.4);
+        }
+        .btn:hover { background: linear-gradient(45deg, #1d4ed8, #2563eb); transform: translateY(-2px); }
+        .btn.secondary { background: #475569; margin-top: 10px; padding: 10px; font-size: 0.95rem; box-shadow: none; }
+        .btn.secondary:hover { background: #334155; }
+
+        #ui-overlay {
+            position: absolute; top: 20px; left: 20px; right: 20px;
+            display: flex; justify-content: space-between; align-items: flex-start;
+            pointer-events: none; z-index: 10;
+        }
+
+        .hud-box {
+            background: rgba(2, 6, 23, 0.6); padding: 15px 25px;
+            border-radius: 12px; border: 1px solid rgba(0, 243, 255, 0.15); pointer-events: auto;
+            backdrop-filter: blur(8px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+        }
+
+        #status-text { 
+            font-size: 1.8rem; font-weight: 800; margin-bottom: 5px; 
+            text-transform: uppercase; letter-spacing: 1px;
+            text-shadow: 0 0 15px var(--target);
+        }
+        
+        #octave-info { font-size: 1rem; font-weight: 600; margin-top: 5px; min-height: 1.2rem; }
+        .text-success { color: var(--success); text-shadow: 0 0 10px var(--success); }
+        .text-warning { color: var(--warning); }
+        .text-danger { color: var(--danger); text-shadow: 0 0 10px var(--danger); }
+
+        #cheat-warning {
+            color: var(--danger); font-size: 0.85rem; font-weight: bold; 
+            margin-top: 5px; display: none; animation: pulse 1s infinite;
+        }
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+
+        canvas { flex: 1; width: 100%; display: block; background: transparent; }
+        .hidden { display: none !important; }
+
+        .progress-container {
+            width: 100%; height: 14px; background: rgba(0,0,0,0.5);
+            border-radius: 7px; margin-top: 15px; overflow: hidden;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        #match-progress {
+            height: 100%; width: 0%; background: linear-gradient(90deg, #10b981, #34d399);
+            transition: width 0.1s linear; box-shadow: 0 0 15px var(--success);
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>Vocal Pitch EKG</h1>
+        <p class="subtitle">Match the blue target line. Your pitch is marked in RED.</p>
+        <div class="headphones-badge">🎧 Headphones Strongly Recommended</div>
+    </header>
+
+    <div id="setup-screen">
+        <div class="container">
+            <div class="form-group">
+                <label for="mode">Training Mode</label>
+                <select id="mode">
+                    <option value="assist">Assist (Target note plays continuously while you sing)</option>
+                    <option value="memory">Memory (Target note plays briefly, sing from memory)</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="difficulty">Difficulty (Target Width)</label>
+                <select id="difficulty">
+                    <option value="0.5">Beginner (±50 cents / Half semitone)</option>
+                    <option value="0.3" selected>Intermediate (±30 cents)</option>
+                    <option value="0.15">Advanced (±15 cents)</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="note-count">Number of Notes</label>
+                <select id="note-count">
+                    <option value="5">5 Notes</option>
+                    <option value="10" selected>10 Notes</option>
+                    <option value="20">20 Notes</option>
+                    <option value="999">Endless Mode</option>
+                </select>
+            </div>
+            <button class="btn" id="start-btn">Start Training</button>
+        </div>
+    </div>
+
+    <div id="game-screen">
+        <div id="ui-overlay">
+            <div class="hud-box">
+                <div id="status-text" style="color: var(--target);">GET READY</div>
+                <div style="font-size: 1.1rem; margin-top:5px;">Target Note: <strong id="target-note-name" style="color:var(--target); font-size:1.4rem;">-</strong></div>
+                <div id="octave-info" class="text-warning"></div>
+                <div id="cheat-warning">⚠️ Speaker bleed detected! Sing louder!</div>
+                <div class="progress-container">
+                    <div id="match-progress"></div>
+                </div>
+            </div>
+            <div class="hud-box" style="text-align: right; min-width: 160px;">
+                <div style="margin-bottom: 12px; font-size: 1.1rem;">Note: <strong id="current-note-num">1</strong> / <span id="total-notes-num">10</span></div>
+                <button class="btn secondary hidden" id="replay-btn">Replay Note</button>
+                <button class="btn secondary" id="quit-btn" style="background: rgba(239, 68, 68, 0.2); border: 1px solid var(--danger); color: #fca5a5;">Quit Session</button>
+            </div>
+        </div>
+        <canvas id="pitchCanvas"></canvas>
+    </div>
+
+<script>
+/**
+ * AUDIO ENGINE
+ */
+let audioCtx = null;
+let analyser = null;
+let micStream = null;
+let synthOsc = null;
+let synthGain = null;
+
+const NOTE_NAMES =['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+function midiToFreq(m) { return 440 * Math.pow(2, (m - 69) / 12); }
+function getNoteName(midi) { return `${NOTE_NAMES[(midi % 12 + 12) % 12]}${Math.floor(midi / 12) - 1}`; }
+
+function autoCorrelate(buf, sampleRate) {
+    let SIZE = buf.length;
+    let rms = 0;
+    for (let i = 0; i < SIZE; i++) rms += buf[i] * buf[i];
+    rms = Math.sqrt(rms / SIZE);
+    if (rms < 0.015) return -1; // Ignore silence
+
+    let r1 = 0, r2 = SIZE - 1, thres = 0.2;
+    for (let i = 0; i < SIZE / 2; i++) if (Math.abs(buf[i]) < thres) { r1 = i; break; }
+    for (let i = 1; i < SIZE / 2; i++) if (Math.abs(buf[SIZE - i]) < thres) { r2 = SIZE - i; break; }
+
+    buf = buf.slice(r1, r2);
+    SIZE = buf.length;
+    let c = new Array(SIZE).fill(0);
+    for (let i = 0; i < SIZE; i++) {
+        for (let j = 0; j < SIZE - i; j++) c[i] = c[i] + buf[j] * buf[j + i];
+    }
+
+    let d = 0; while (c[d] > c[d + 1]) d++;
+    let maxval = -1, maxpos = -1;
+    for (let i = d; i < SIZE; i++) {
+        if (c[i] > maxval) { maxval = c[i]; maxpos = i; }
+    }
+    
+    let T0 = maxpos;
+    let x0 = maxpos, x1 = maxpos - 1, x2 = maxpos + 1;
+    if (x1 >= 0 && x2 < SIZE) {
+        let y0 = c[x1], y1 = c[x0], y2 = c[x2];
+        let a = (y0 + y2 - 2 * y1) / 2;
+        let b = (y2 - y0) / 2;
+        if (a !== 0) T0 = T0 - b / (2 * a);
+    }
+    return sampleRate / T0;
+}
+
+function playTargetNoteAudio(midiNote, mode) {
+    stopTargetNoteAudio(0.1); 
+    synthOsc = audioCtx.createOscillator();
+    synthGain = audioCtx.createGain();
+    
+    // Triangle wave interferes slightly less with the human voice than pure sine
+    synthOsc.type = 'triangle';
+    synthOsc.frequency.value = midiToFreq(midiNote);
+    
+    synthOsc.connect(synthGain);
+    synthGain.connect(audioCtx.destination);
+    synthOsc.start();
+    
+    synthGain.gain.setValueAtTime(0, audioCtx.currentTime);
+    synthGain.gain.linearRampToValueAtTime(0.3, audioCtx.currentTime + 0.1);
+
+    if (mode === 'memory') {
+        synthGain.gain.setValueAtTime(0.3, audioCtx.currentTime + 2.4);
+        synthGain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 2.5);
+        synthOsc.stop(audioCtx.currentTime + 2.6);
+        setTimeout(() => {
+            if(gameState === 'LISTENING') document.getElementById('status-text').innerText = "SING NOW";
+        }, 2500);
+    } else {
+        // Reduced continuous volume to minimize speaker bleed
+        synthGain.gain.linearRampToValueAtTime(0.08, audioCtx.currentTime + 1.0);
+    }
+}
+
+function stopTargetNoteAudio(fadeTime = 0.2) {
+    if (synthOsc && synthGain) {
+        try {
+            let now = audioCtx.currentTime;
+            synthGain.gain.cancelScheduledValues(now);
+            synthGain.gain.setValueAtTime(synthGain.gain.value, now);
+            synthGain.gain.linearRampToValueAtTime(0, now + fadeTime);
+            synthOsc.stop(now + fadeTime + 0.1);
+        } catch (e) {}
+        synthOsc = null;
+    }
+}
+
+/**
+ * GAME LOGIC & WINDOWED SUCCESS
+ */
+let config = { mode: 'assist', tolerance: 0.3, totalNotes: 10 };
+let currentNoteIndex = 0;
+let targetMidi = 60;
+let gameState = 'IDLE'; 
+let lastFrameTime = performance.now();
+
+let matchBuffer =[]; 
+const MATCH_WINDOW_SEC = 1.5;   
+const REQUIRED_MATCH_SEC = 0.8; 
+
+let pitchHistory =[]; 
+const EKG_WINDOW_MS = 4000; 
+let varianceBuffer =[];
+
+const canvas = document.getElementById('pitchCanvas');
+const ctx = canvas.getContext('2d');
+
+function resizeCanvas() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+window.addEventListener('resize', resizeCanvas);
+function generateRandomNote() { return Math.floor(Math.random() * (67 - 48 + 1)) + 48; }
+
+async function startTraining() {
+    config.mode = document.getElementById('mode').value;
+    config.tolerance = parseFloat(document.getElementById('difficulty').value);
+    config.totalNotes = parseInt(document.getElementById('note-count').value);
+    
+    document.getElementById('total-notes-num').innerText = config.totalNotes > 900 ? "∞" : config.totalNotes;
+    document.getElementById('replay-btn').classList.toggle('hidden', config.mode !== 'memory');
+
+    try {
+        // HARDWARE AEC DISABLED - Prevents the browser from muting your voice
+        micStream = await navigator.mediaDevices.getUserMedia({ 
+            audio: { 
+                echoCancellation: false, 
+                noiseSuppression: false, 
+                autoGainControl: false 
+            } 
+        });
+        
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        analyser = audioCtx.createAnalyser();
+        analyser.fftSize = 2048;
+        
+        let source = audioCtx.createMediaStreamSource(micStream);
+        source.connect(analyser);
+        
+        document.getElementById('setup-screen').style.display = 'none';
+        document.getElementById('game-screen').style.display = 'flex';
+        resizeCanvas();
+        
+        currentNoteIndex = 0;
+        nextNote();
+        requestAnimationFrame(renderLoop);
+    } catch (err) {
+        alert("Microphone access is required. " + err.message);
+    }
+}
+
+function nextNote() {
+    if (currentNoteIndex >= config.totalNotes) { endGame(); return; }
+    
+    currentNoteIndex++;
+    document.getElementById('current-note-num').innerText = currentNoteIndex;
+    
+    targetMidi = generateRandomNote();
+    document.getElementById('target-note-name').innerText = getNoteName(targetMidi);
+    document.getElementById('octave-info').innerText = "";
+    document.getElementById('match-progress').style.width = "0%";
+    document.getElementById('match-progress').style.background = "linear-gradient(90deg, #10b981, #34d399)";
+    
+    matchBuffer =[];
+    pitchHistory = [];
+    varianceBuffer =[];
+    
+    gameState = 'PLAYING';
+    
+    let textElem = document.getElementById('status-text');
+    textElem.innerText = config.mode === 'memory' ? "LISTEN..." : "SING ALONG";
+    textElem.style.color = "var(--target)";
+    textElem.style.textShadow = "0 0 15px var(--target)";
+    
+    playTargetNoteAudio(targetMidi, config.mode);
+    gameState = 'LISTENING';
+}
+
+function endGame() {
+    gameState = 'IDLE';
+    stopTargetNoteAudio(1.0);
+    let textElem = document.getElementById('status-text');
+    textElem.innerText = "COMPLETE!";
+    textElem.style.color = "var(--success)";
+    textElem.style.textShadow = "0 0 15px var(--success)";
+    document.getElementById('octave-info').innerText = "Session finished.";
+    setTimeout(quitGame, 3000);
+}
+
+function quitGame() {
+    stopTargetNoteAudio(0.2);
+    if (micStream) micStream.getTracks().forEach(t => t.stop());
+    if (audioCtx) audioCtx.close();
+    
+    document.getElementById('game-screen').style.display = 'none';
+    document.getElementById('setup-screen').style.display = 'flex';
+    gameState = 'IDLE';
+}
+
+/**
+ * RENDERING & UPDATE LOOP
+ */
+function renderLoop(time) {
+    if (gameState === 'IDLE') return;
+    let dt = (time - lastFrameTime) / 1000;
+    lastFrameTime = time;
+    if (dt > 0.1) dt = 0.1; 
+
+    // 1. Analyze Audio
+    let buf = new Float32Array(analyser.fftSize);
+    analyser.getFloatTimeDomainData(buf);
+    let pitchFreq = autoCorrelate(buf, audioCtx.sampleRate);
+    
+    let currentMidi = -1;
+    let diffFromTarget = 0;
+    let isSynthBleed = false;
+
+    if (pitchFreq !== -1) {
+        currentMidi = 69 + 12 * Math.log2(pitchFreq / 440);
+        let octaveOffset = Math.round((currentMidi - targetMidi) / 12);
+        let closestOctaveTarget = targetMidi + (octaveOffset * 12);
+        diffFromTarget = currentMidi - closestOctaveTarget;
+
+        // Anti-Cheat: Fast variance detection
+        varianceBuffer.push(currentMidi);
+        if (varianceBuffer.length > 15) varianceBuffer.shift();
+        if (varianceBuffer.length === 15) {
+            let avg = varianceBuffer.reduce((a,b)=>a+b)/15;
+            let variance = varianceBuffer.reduce((a,b)=>a+Math.pow(b-avg, 2), 0)/15;
+            // Synth waves are mathematically flawless (variance ~0.000). 
+            // A human voice holding a straight note usually floats between 0.05 - 0.2
+            if (variance < 0.003) isSynthBleed = true; 
+        }
+    } else {
+        varianceBuffer =[]; 
+    }
+
+    // 2. Forgiving Match Logic
+    let isMatch = false;
+    let octaveOffset = Math.round((currentMidi - targetMidi) / 12);
+
+    if (currentMidi !== -1 && gameState === 'LISTENING') {
+        isMatch = Math.abs(diffFromTarget) <= config.tolerance;
+        
+        if (isSynthBleed) {
+            document.getElementById('cheat-warning').style.display = 'block';
+            isMatch = false;
+        } else {
+            document.getElementById('cheat-warning').style.display = 'none';
+        }
+
+        // Octave / Direction Text
+        let uiOctaveText = "";
+        if (isMatch) {
+            uiOctaveText = octaveOffset === 0 ? "Perfect Pitch!" : `Matching (Octave ${octaveOffset > 0 ? "Higher" : "Lower"})`;
+            document.getElementById('octave-info').className = "text-success";
+        } else {
+            uiOctaveText = diffFromTarget < 0 
+                ? `Flat (Bring it UP) - Near ${getNoteName(Math.round(currentMidi))}`
+                : `Sharp (Bring it DOWN) - Near ${getNoteName(Math.round(currentMidi))}`;
+            document.getElementById('octave-info').className = Math.abs(diffFromTarget) < 1.0 ? "text-warning" : "text-danger";
+        }
+        document.getElementById('octave-info').innerText = uiOctaveText;
+    } else if (gameState === 'LISTENING') {
+        document.getElementById('octave-info').innerText = "Sing into the mic...";
+        document.getElementById('octave-info').className = "";
+        document.getElementById('cheat-warning').style.display = 'none';
+    }
+
+    // Windowed Success Evaluation
+    if (gameState === 'LISTENING') {
+        matchBuffer.push({ time: time, dt: dt, match: isMatch });
+        matchBuffer = matchBuffer.filter(m => time - m.time <= MATCH_WINDOW_SEC * 1000);
+        
+        let matchDuration = matchBuffer.reduce((sum, m) => sum + (m.match ? m.dt : 0), 0);
+        let progressRatio = Math.min(1.0, matchDuration / REQUIRED_MATCH_SEC);
+        
+        document.getElementById('match-progress').style.width = (progressRatio * 100) + "%";
+
+        if (progressRatio >= 1.0) {
+            gameState = 'SUCCESS';
+            let textElem = document.getElementById('status-text');
+            textElem.innerText = "PERFECT MATCH!";
+            textElem.style.color = "var(--success)";
+            textElem.style.textShadow = "0 0 15px var(--success)";
+            document.getElementById('match-progress').style.background = "#fff"; 
+            
+            stopTargetNoteAudio(1.2); 
+            setTimeout(() => { if (gameState !== 'IDLE') nextNote(); }, 1500);
+        }
+    }
+
+    if (currentMidi !== -1) {
+        pitchHistory.push({ time: time, diff: diffFromTarget, isMatch: isMatch });
+    }
+    pitchHistory = pitchHistory.filter(p => time - p.time < EKG_WINDOW_MS);
+
+    // 3. Draw Visually Exciting EKG
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    const SEMITONE_RANGE = 6; 
+    const pixelsPerSemitone = (canvas.height / 2) / SEMITONE_RANGE;
+    const centerY = canvas.height / 2;
+
+    function getDrawY(diff) { return centerY - (diff * pixelsPerSemitone); }
+
+    // Draw Sleek Grid
+    ctx.textAlign = "left";
+    ctx.textBaseline = "middle";
+    for(let i = -SEMITONE_RANGE; i <= SEMITONE_RANGE; i++) {
+        let y = getDrawY(i);
+        ctx.beginPath();
+        if (i === 0) {
+            ctx.strokeStyle = "var(--target)";
+            ctx.lineWidth = 3;
+            ctx.shadowBlur = 15;
+            ctx.shadowColor = "var(--target)";
+        } else {
+            ctx.strokeStyle = "var(--grid)";
+            ctx.lineWidth = 1;
+            ctx.shadowBlur = 0;
+        }
+        ctx.moveTo(0, y);
+        ctx.lineTo(canvas.width, y);
+        ctx.stroke();
+
+        ctx.shadowBlur = 0;
+        ctx.fillStyle = i === 0 ? "var(--target)" : "rgba(255,255,255,0.2)";
+        ctx.font = i === 0 ? "bold 16px sans-serif" : "12px sans-serif";
+        if (i === 0) ctx.fillText(`TARGET`, 20, y - 15);
+        else ctx.fillText(`${i > 0 ? '+'+i : i}`, 20, y - 10);
+    }
+
+    // Draw Tolerance Band
+    let targetZoneHeight = config.tolerance * 2 * pixelsPerSemitone;
+    let bandGradient = ctx.createLinearGradient(0, centerY - targetZoneHeight/2, 0, centerY + targetZoneHeight/2);
+    if (gameState === 'SUCCESS') {
+        bandGradient.addColorStop(0, "rgba(16, 185, 129, 0)");
+        bandGradient.addColorStop(0.5, "rgba(16, 185, 129, 0.4)");
+        bandGradient.addColorStop(1, "rgba(16, 185, 129, 0)");
+    } else {
+        bandGradient.addColorStop(0, "rgba(0, 243, 255, 0)");
+        bandGradient.addColorStop(0.5, "rgba(0, 243, 255, 0.2)");
+        bandGradient.addColorStop(1, "rgba(0, 243, 255, 0)");
+    }
+    ctx.fillStyle = bandGradient;
+    ctx.fillRect(0, centerY - targetZoneHeight/2, canvas.width, targetZoneHeight);
+
+    // Draw High-Intensity RED EKG Line
+    if (pitchHistory.length > 0) {
+        ctx.beginPath();
+        ctx.lineWidth = 5;
+        ctx.lineCap = "round";
+        ctx.lineJoin = "round";
+        
+        let firstPoint = true;
+        let lastX = 0; let lastY = 0;
+        let lastDiff = 0;
+
+        for(let i = 0; i < pitchHistory.length; i++) {
+            let pt = pitchHistory[i];
+            let age = time - pt.time;
+            let x = canvas.width * 0.8 - (age / EKG_WINDOW_MS) * canvas.width;
+            let y = getDrawY(pt.diff);
+
+            let isGap = i > 0 && (pt.time - pitchHistory[i-1].time > 150);
+            let isWrap = Math.abs(pt.diff - lastDiff) > 5;
+
+            if (firstPoint || isGap || isWrap) {
+                ctx.moveTo(x, y);
+                firstPoint = false;
+            } else {
+                ctx.lineTo(x, y);
+            }
+            lastX = x; lastY = y; lastDiff = pt.diff;
+        }
+        
+        ctx.strokeStyle = isSynthBleed ? "rgba(255, 0, 60, 0.3)" : "var(--user-pitch)";
+        ctx.shadowBlur = 20;
+        ctx.shadowColor = "var(--user-pitch)";
+        ctx.stroke();
+        
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = isSynthBleed ? "rgba(255, 255, 255, 0.2)" : "rgba(255, 255, 255, 0.7)";
+        ctx.shadowBlur = 0;
+        ctx.stroke();
+
+        // Draw Actively Singing Head / Dot
+        if (currentMidi !== -1 && !firstPoint) {
+            ctx.beginPath();
+            ctx.arc(lastX, lastY, 12, 0, Math.PI * 2);
+            ctx.fillStyle = isSynthBleed ? "rgba(255, 0, 60, 0.3)" : "var(--user-pitch)";
+            ctx.shadowBlur = 30;
+            ctx.shadowColor = "var(--user-pitch)";
+            ctx.fill();
+            
+            ctx.beginPath();
+            ctx.arc(lastX, lastY, 5, 0, Math.PI * 2);
+            ctx.fillStyle = isSynthBleed ? "rgba(255, 255, 255, 0.2)" : "#ffffff";
+            ctx.shadowBlur = 10;
+            ctx.shadowColor = "#ffffff";
+            ctx.fill();
+
+            if (!isSynthBleed) {
+                ctx.fillStyle = "white";
+                ctx.font = "bold 18px sans-serif";
+                ctx.shadowColor = "black";
+                ctx.shadowBlur = 5;
+                ctx.fillText(getNoteName(Math.round(currentMidi)), lastX + 25, lastY);
+                ctx.shadowBlur = 0;
+            }
+        }
+    }
+
+    requestAnimationFrame(renderLoop);
+}
+
+document.getElementById('start-btn').addEventListener('click', startTraining);
+document.getElementById('quit-btn').addEventListener('click', quitGame);
+document.getElementById('replay-btn').addEventListener('click', () => {
+    if (gameState === 'LISTENING') playTargetNoteAudio(targetMidi, 'memory');
+});
+</script>
+</body>
+</html>
