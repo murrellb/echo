@@ -54,7 +54,7 @@
       <div id="inviteRow"><input type="text" id="invite" readonly><button type="button" class="secondary" id="copySmall">COPY</button></div>
       <div id="joinRow"><input type="text" id="joinCode" placeholder="PASTE ROOM CODE OR INVITE"><button type="button" class="secondary" id="joinBtn">JOIN</button></div>
       <div class="cameraOptions"><span>CAMERA</span><button type="button" class="secondary active" id="ballCamBtn">FACE BALL</button><button type="button" class="secondary" id="followCamBtn">3RD-PERSON FOLLOW</button></div>
-      <p class="fine"><kbd>ARROWS</kbd> drive / aerial pitch-yaw / directional dodge &nbsp; <kbd>A/D</kbd> air roll &nbsp; <kbd>SHIFT</kbd> boost &nbsp; <kbd>SPACE</kbd> jump / dodge &nbsp; <kbd>CTRL</kbd> powerslide &nbsp; <kbd>F</kbd> camera &nbsp; <kbd>R</kbd> reset in practice &nbsp; Gamepad supported.</p>
+      <p class="fine"><kbd>ARROWS</kbd> drive / aerial pitch-yaw / directional dodge &nbsp; <kbd>A/D</kbd> air roll &nbsp; <kbd>SHIFT</kbd> boost &nbsp; <kbd>SPACE</kbd> jump / dodge &nbsp; <kbd>CTRL</kbd> powerslide &nbsp; <kbd>C / F</kbd> camera &nbsp; <kbd>R</kbd> reset in practice &nbsp; Gamepad supported.</p>
     </section>
   </div>
   <div id="hud">
@@ -62,7 +62,7 @@
     <div id="status"><span class="dot" id="netDot"></span><span id="roomState">CONNECTING</span></div>
     <div id="centerMessage"></div>
     <div id="net"></div>
-    <div id="controls">↑ ↓ · THROTTLE / PITCH / DODGE<br>← → · STEER / YAW / SIDE DODGE<br>A D · AIR ROLL<br>SHIFT · BOOST &nbsp; SPACE · JUMP<br>F · CAMERA &nbsp; M / ESC · MENU<br><span id="fovReadout">FOV · 86°</span></div>
+    <div id="controls">↑ ↓ · THROTTLE / PITCH / DODGE<br>← → · STEER / YAW / SIDE DODGE<br>A D · AIR ROLL<br>SHIFT · BOOST &nbsp; SPACE · JUMP<br>C / F · CAMERA &nbsp; M / ESC · MENU<br><span id="fovReadout">FOV · 86°</span></div>
     <div id="bottom"><div id="speed"><strong>0</strong><span>KM/H</span></div><div id="boost"><span id="boostValue">100</span><span id="boostLabel">BOOST</span></div></div>
     <div id="ballCam">BALL CAM · ON</div>
   </div>
@@ -283,7 +283,7 @@
 
     function newCar(team=0,id=""){
       return{id,team,mesh:makeCar(team),pos:new V3(0,CAR_REST,0),vel:new V3(),q:new Q4(),ang:new V3(),groundNormal:new V3(0,1,0),boost:100,onGround:true,
-        jumpAt:-99,jumpHeld:0,jumped:false,doubleUsed:false,dodgeUntil:0,impactSlipUntil:0,lastBumpAt:-99,lastPad:-1,lastBoostAt:-99,demolished:false,respawnAt:0,lastRespawnSecond:-1,
+        jumpAt:-99,jumpHeld:0,jumped:false,doubleUsed:false,dodgeUntil:0,impactSlipUntil:0,lastBumpAt:-99,lastPad:-1,lastBoostAt:-99,boostSpool:0,demolished:false,respawnAt:0,lastRespawnSecond:-1,
         input:{throttle:0,steer:0,pitch:0,yaw:0,roll:0,dodgeX:0,dodgeZ:0,boost:false,jump:false,slide:false},
         targetPos:new V3(),targetVel:new V3(),targetQ:new Q4(),lastSeen:performance.now(),bot:false};
     }
@@ -299,7 +299,7 @@
       const s=KICKOFF_SLOTS[((slot%KICKOFF_SLOTS.length)+KICKOFF_SLOTS.length)%KICKOFF_SLOTS.length];c.spawnSlot=slot;
       c.pos.set(...s);c.vel.set(0,0,0);c.ang.set(0,0,0);c.groundNormal.copy(UP);
       const aim=tmpA.set(-s[0],0,-s[2]).normalize(),heading=Math.atan2(-aim.x,-aim.z);
-      c.q.setFromAxisAngle(YAX,heading);c.boost=100;c.onGround=true;c.jumped=false;c.doubleUsed=false;c.jumpAt=-99;c.impactSlipUntil=0;c.lastBumpAt=-99;c.demolished=false;c.respawnAt=0;c.mesh.visible=true;syncCarMesh(c);
+      c.q.setFromAxisAngle(YAX,heading);c.boost=100;c.boostSpool=0;c.onGround=true;c.jumped=false;c.doubleUsed=false;c.jumpAt=-99;c.impactSlipUntil=0;c.lastBumpAt=-99;c.demolished=false;c.respawnAt=0;c.mesh.visible=true;syncCarMesh(c);
     }
     function resetKickoff(){
       ball.pos.set(0,BALL_R,0);ball.vel.set(0,0,0);ball.ang.set(.2,0,.3);ball.inGoal=0;
@@ -315,6 +315,10 @@
     function forward(c,out=new V3()){return out.copy(ZNEG).applyQuaternion(c.q)}
     function right(c,out=new V3()){return out.copy(XAX).applyQuaternion(c.q)}
     function up(c,out=new V3()){return out.copy(UP).applyQuaternion(c.q)}
+    function stableHeading(c,out,reference){
+      out.copy(ZNEG).applyQuaternion(c.q).setY(0);if(out.lengthSq()<.0008)return out.set(0,0,0);
+      out.normalize();if(out.dot(reference)<0)out.negate();return out;
+    }
     function curvature(v){
       v=Math.abs(v);
       if(v<500)return .0069-5.84e-6*v;if(v<1000)return .00561-3.26e-6*v;if(v<1500)return .0043-1.95e-6*v;
@@ -373,6 +377,9 @@
     function simulateCar(c,dt,now){
       if(c.demolished)return;
       const input=c.input,f=forward(c,tmpA),r=right(c,tmpB),u=up(c,tmpC);
+      const boostRequested=input.boost&&c.boost>0;
+      c.boostSpool=clamp(c.boostSpool+(boostRequested?dt/.48:-dt/.22),0,1);
+      const smoothSpool=c.boostSpool*c.boostSpool*(3-2*c.boostSpool),boostPower=.2+smoothSpool*.8,boostBurn=.32+c.boostSpool*.68;
       const touching=carSurfaceContact(c),surfaceUp=c.groundNormal;
       if(touching&&u.dot(surfaceUp)>-.25){
         const impactSliding=now<c.impactSlipUntil;
@@ -380,15 +387,15 @@
         let ff=tmpA.copy(f).addScaledVector(surfaceUp,-f.dot(surfaceUp));
         if(ff.lengthSq()<.01)ff.copy(r).cross(surfaceUp);ff.normalize();
         let rr=tmpB.copy(ff).cross(surfaceUp).normalize(),back=tmpC.copy(ff).negate();
-        tmpM.makeBasis(rr,surfaceUp,back);tmpQ.setFromRotationMatrix(tmpM);c.q.slerp(tmpQ,clamp(dt*(impactSliding?6:15),0,1));c.ang.multiplyScalar(Math.pow(impactSliding ? .42 : .015,dt));
+        tmpM.makeBasis(rr,surfaceUp,back);tmpQ.setFromRotationMatrix(tmpM);c.q.slerp(tmpQ,clamp(dt*(impactSliding?3:15),0,1));c.ang.multiplyScalar(Math.pow(impactSliding ? .68 : .015,dt));
         ff=forward(c,tmpA);ff.addScaledVector(surfaceUp,-ff.dot(surfaceUp)).normalize();
         rr=tmpB.copy(ff).cross(surfaceUp).normalize();
         let fs=c.vel.dot(ff),ss=c.vel.dot(rr);
-        if(Math.abs(input.throttle)<.01){const coast=impactSliding ? .35 : (Math.abs(fs)>NO_BOOST_MAX ? .55 : COAST),d=Math.min(Math.abs(fs),coast*dt);fs-=Math.sign(fs)*d}
+        if(Math.abs(input.throttle)<.01){const coast=impactSliding ? .18 : (Math.abs(fs)>NO_BOOST_MAX ? .55 : COAST),d=Math.min(Math.abs(fs),coast*dt);fs-=Math.sign(fs)*d}
         else if(fs*input.throttle<-.05)fs+=Math.sign(input.throttle)*BRAKE*dt;
         else fs+=input.throttle*throttleAccel(fs)*dt;
-        if(input.boost&&c.boost>0){fs+=BOOST_ACCEL_GROUND*dt;c.boost=Math.max(0,c.boost-BOOST_DRAIN*dt);c.lastBoostAt=now}
-        const grip=impactSliding ? .7 : (input.slide?2.8:12);ss*=Math.exp(-grip*dt);
+        if(boostRequested){fs+=BOOST_ACCEL_GROUND*boostPower*dt;c.boost=Math.max(0,c.boost-BOOST_DRAIN*boostBurn*dt);c.lastBoostAt=now}
+        const grip=impactSliding ? .28 : (input.slide?2.8:12);ss*=Math.exp(-grip*dt);
         const speedUU=Math.abs(fs)*100,turn=curvature(speedUU)*speedUU*input.steer*Math.sign(fs||input.throttle||1);
         const steerScale=input.slide?1.42:1;tmpQ.setFromAxisAngle(surfaceUp,-turn*steerScale*dt);c.q.premultiply(tmpQ).normalize();
         c.vel.copy(ff).multiplyScalar(fs).addScaledVector(rr,ss);
@@ -399,7 +406,7 @@
       }else{
         c.onGround=false;c.vel.y-=G*dt;
         if(input.throttle)c.vel.addScaledVector(f,input.throttle*AIR_THROTTLE*dt);
-        if(input.boost&&c.boost>0){c.vel.addScaledVector(f,BOOST_ACCEL_AIR*dt);c.boost=Math.max(0,c.boost-BOOST_DRAIN*dt);c.lastBoostAt=now}
+        if(boostRequested){c.vel.addScaledVector(f,BOOST_ACCEL_AIR*boostPower*dt);c.boost=Math.max(0,c.boost-BOOST_DRAIN*boostBurn*dt);c.lastBoostAt=now}
         if(c.jumped&&input.jump&&c.jumpHeld<.2){c.vel.addScaledVector(u,JUMP_HOLD_ACCEL*dt);c.jumpHeld+=dt}
         const pitch=-input.pitch*12.46,yaw=-input.yaw*9.11,roll=-input.roll*22;
         c.ang.addScaledVector(r,pitch*dt).addScaledVector(u,yaw*dt).addScaledVector(f,roll*dt);
@@ -409,7 +416,7 @@
             c.doubleUsed=true;const dx=input.dodgeX,dz=input.dodgeZ;
             if(Math.hypot(dx,dz)>.22){
               const d=forward(c,tmpA).multiplyScalar(dz).addScaledVector(right(c,tmpB),dx).normalize();c.vel.addScaledVector(d,5);
-              c.ang.addScaledVector(right(c,tmpB),-dz*4.8).addScaledVector(forward(c,tmpA),-dx*4.8);c.dodgeUntil=now+.65;audio(125,.08,"sawtooth",.05);
+              c.ang.addScaledVector(right(c,tmpB),-dz*4.8).addScaledVector(forward(c,tmpA),dx*4.8);c.dodgeUntil=now+.65;audio(125,.08,"sawtooth",.05);
             }else{c.vel.addScaledVector(u,JUMP_IMPULSE);audio(210,.055,"square",.04)}
           }
           jumpPressed=false;
@@ -417,8 +424,8 @@
         integrateRotation(c,dt);capVelocity(c.vel);
       }
       if(!input.boost&&now-c.lastBoostAt>.3)c.boost=Math.min(100,c.boost+BOOST_REGEN*dt);
-      c.pos.addScaledVector(c.vel,dt);collideCarArena(c);collectPads(c,now);syncCarMesh(c,input.boost&&c.boost>0);
-      if(input.boost&&c.boost>0&&frame%4===0){
+      c.pos.addScaledVector(c.vel,dt);collideCarArena(c);collectPads(c,now);syncCarMesh(c,c.boostSpool>.04);
+      if(boostRequested&&frame%4===0){
         const rear=forward(c,new V3()).multiplyScalar(-1.7).add(c.pos);particleBurst(rear,c.team===0?0x53d8ff:0xff8845,1,1.4,.34,c.vel.clone().multiplyScalar(.08));
       }
     }
@@ -438,7 +445,10 @@
           particleBurst(new V3(p.x,.18,p.z),0xffb52c,p.amount===100?20:9,p.amount===100?5:3,.5,new V3(0,1.5,0));if(c===local)audio(520,.08,"sine",.035);
         }}
     }
-    function syncCarMesh(c,boosting=false){c.mesh.position.copy(c.pos);c.mesh.quaternion.copy(c.q);c.mesh.visible=!c.demolished;c.mesh.userData.flame.visible=!c.demolished&&boosting;c.mesh.userData.flame.scale.y=.8+Math.random()*.45}
+    function syncCarMesh(c,boosting=false){
+      c.mesh.position.copy(c.pos);c.mesh.quaternion.copy(c.q);c.mesh.visible=!c.demolished;c.mesh.userData.flame.visible=!c.demolished&&boosting;
+      c.mesh.userData.flame.scale.y=.25+c.boostSpool*.8+Math.random()*.18;c.mesh.userData.flame.material.opacity=.25+c.boostSpool*.65;
+    }
     function demolish(c,by,now,broadcastEvent=false){
       if(!c||c.demolished)return;c.demolished=true;c.respawnAt=now+DEMO_RESPAWN;c.lastRespawnSecond=-1;c.vel.set(0,0,0);c.ang.set(0,0,0);c.mesh.visible=false;
       explosionAt(c.pos.clone().add(new V3(0,.45,0)),by?.team??c.team);
@@ -449,27 +459,27 @@
       if(a.demolished||b.demolished||!a.mesh.visible||!b.mesh.visible)return;
       const delta=new V3().subVectors(b.pos,a.pos),dist=delta.length(),min=CAR_R*2;if(dist>=min||dist<.001)return;
       const n=delta.multiplyScalar(1/dist),closing=new V3().subVectors(a.vel,b.vel).dot(n);
-      const aStrike=a.vel.length()>SUPERSONIC-1&&forward(a,new V3()).dot(n)>.62&&closing>10;
-      const bStrike=b.vel.length()>SUPERSONIC-1&&forward(b,new V3()).dot(n.clone().negate())>.62&&closing>10;
+      const aStrike=a.vel.length()>SUPERSONIC-.12&&forward(a,new V3()).dot(n)>.84&&closing>15.5;
+      const bStrike=b.vel.length()>SUPERSONIC-.12&&forward(b,new V3()).dot(n.clone().negate())>.84&&closing>15.5;
       if(allowDemo&&(aStrike||bStrike)){
         if(aStrike&&bStrike){demolish(a,b,now,true);demolish(b,a,now,true)}
         else if(aStrike)demolish(b,a,now,true);else demolish(a,b,now,true);return;
       }
       const overlap=min-dist+.01;a.pos.addScaledVector(n,-overlap*.5);b.pos.addScaledVector(n,overlap*.5);
       if(closing>0){
-        const aToward=Math.max(0,a.vel.dot(n)),bToward=Math.max(0,-b.vel.dot(n)),impulse=closing*.86;
+        const aToward=Math.max(0,a.vel.dot(n)),bToward=Math.max(0,-b.vel.dot(n)),impulse=closing*.96;
         a.vel.addScaledVector(n,-impulse);b.vel.addScaledVector(n,impulse);
-        const victim=aToward>bToward?b:a,attacker=victim===b?a:b,launch=clamp(.65+closing*.13,.75,3.5);
-        victim.vel.y+=launch;victim.impactSlipUntil=Math.max(victim.impactSlipUntil,now+clamp(.3+closing*.018,.38,.72));
-        attacker.impactSlipUntil=Math.max(attacker.impactSlipUntil,now+.22);
+        const victim=aToward>bToward?b:a,attacker=victim===b?a:b,launch=clamp(1.35+closing*.2,1.8,5.4),slip=clamp(1.35+closing*.045,1.5,2.4);
+        const launchNormal=victim.onGround?victim.groundNormal:UP;victim.vel.addScaledVector(launchNormal,launch);victim.pos.addScaledVector(launchNormal,.12);victim.onGround=false;
+        victim.impactSlipUntil=Math.max(victim.impactSlipUntil,now+slip);attacker.impactSlipUntil=Math.max(attacker.impactSlipUntil,now+.45);
         const spinAxis=new V3(n.z,.22,-n.x).multiplyScalar(victim===b?1:-1);
         victim.ang.addScaledVector(spinAxis,clamp(closing*.16,.8,3.8));attacker.ang.addScaledVector(spinAxis,-clamp(closing*.045,.2,1));
-        capVelocity(a.vel,MAX_CAR*1.22);capVelocity(b.vel,MAX_CAR*1.22);
+        capVelocity(a.vel,MAX_CAR*1.35);capVelocity(b.vel,MAX_CAR*1.35);
         const impactPoint=a.pos.clone().lerp(b.pos,.5);particleBurst(impactPoint,0xbfefff,8,3.4,.36,new V3(0,1.2,0));
         if(a===local||b===local)audio(54+Math.min(42,closing*2),.12,"triangle",.055);
         if(allowDemo&&now-Math.max(a.lastBumpAt,b.lastBumpAt)>.12){
           a.lastBumpAt=b.lastBumpAt=now;
-          broadcast({t:"bump",cars:[{id:a.id,v:a.vel.toArray(),w:a.ang.toArray()},{id:b.id,v:b.vel.toArray(),w:b.ang.toArray()}],slip:clamp(.3+closing*.018,.38,.72)});
+          broadcast({t:"bump",cars:[{id:a.id,v:a.vel.toArray(),w:a.ang.toArray()},{id:b.id,v:b.vel.toArray(),w:b.ang.toArray()}],slip});
         }
       }
     }
@@ -569,9 +579,9 @@
     function updateScore(){blueScoreEl.textContent=blueScore;orangeScoreEl.textContent=orangeScore}
     function announce(text,dur=1000){centerMessage.textContent=text;centerMessage.classList.add("show");clearTimeout(announce.timer);announce.timer=setTimeout(()=>centerMessage.classList.remove("show"),dur)}
 
-    function packCar(c){return{p:c.pos.toArray(),v:c.vel.toArray(),q:c.q.toArray(),b:c.boost,tm:c.team,g:c.onGround,d:c.demolished}}
+    function packCar(c){return{p:c.pos.toArray(),v:c.vel.toArray(),q:c.q.toArray(),b:c.boost,s:c.boostSpool,tm:c.team,g:c.onGround,d:c.demolished}}
     function unpackCar(c,d,target=true){
-      (target?c.targetPos:c.pos).fromArray(d.p);(target?c.targetVel:c.vel).fromArray(d.v);(target?c.targetQ:c.q).fromArray(d.q);c.boost=d.b;c.onGround=d.g;c.lastSeen=performance.now();
+      (target?c.targetPos:c.pos).fromArray(d.p);(target?c.targetVel:c.vel).fromArray(d.v);(target?c.targetQ:c.q).fromArray(d.q);c.boost=d.b;c.boostSpool=d.s||0;c.onGround=d.g;c.lastSeen=performance.now();
       if(d.d){c.demolished=true;c.mesh.visible=false}
       else if(performance.now()/1000>=c.respawnAt){c.demolished=false;c.mesh.visible=true}
     }
@@ -609,7 +619,8 @@
       else if(d.t==="bump"&&!isHost){
         const now=performance.now()/1000;
         for(const state of d.cars||[]){const c=state.id===myId?local:remotes.get(state.id);if(!c||c.demolished)continue;
-          c.vel.fromArray(state.v);if(c!==local)c.targetVel.copy(c.vel);if(state.w)c.ang.fromArray(state.w);c.impactSlipUntil=Math.max(c.impactSlipUntil,now+(d.slip||.45));
+          c.vel.fromArray(state.v);if(c!==local)c.targetVel.copy(c.vel);if(state.w)c.ang.fromArray(state.w);
+          if(c===local)c.pos.addScaledVector(c.groundNormal,.08);c.onGround=false;c.impactSlipUntil=Math.max(c.impactSlipUntil,now+(d.slip||1.05));
         }
       }
       else if(d.t==="demo"&&!isHost){
@@ -688,9 +699,9 @@
       frame++;
     }
     function renderRemotes(dt){
-      remotes.forEach(c=>{c.pos.lerp(c.targetPos,1-Math.pow(.0003,dt));c.vel.lerp(c.targetVel,1-Math.pow(.001,dt));c.q.slerp(c.targetQ,1-Math.pow(.0002,dt));syncCarMesh(c,c.boost>0&&c.vel.length()>14)});
+      remotes.forEach(c=>{c.pos.lerp(c.targetPos,1-Math.pow(.0003,dt));c.vel.lerp(c.targetVel,1-Math.pow(.001,dt));c.q.slerp(c.targetQ,1-Math.pow(.0002,dt));syncCarMesh(c,c.boostSpool>.04)});
     }
-    const camPos=new V3(),camLook=new V3();
+    const camPos=new V3(),camLook=new V3(),followForward=new V3(0,0,-1);
     function updateWallVisibility(){
       const states={
         blue:camera.position.z>=-HALF_L+.15,orange:camera.position.z<=HALF_L-.15,
@@ -704,22 +715,27 @@
       }
     }
     function updateCamera(dt){
-      const f=forward(local,tmpA),carUp=up(local,tmpB);
+      const f=forward(local,tmpA);
       if(ballCam){
         const planar=tmpC.copy(ball.pos).sub(local.pos);planar.y=0;if(planar.lengthSq()<.01){planar.copy(f);planar.y=0}planar.normalize();
         const angle=Math.atan2(planar.x,planar.z)+camYaw,back=tmpC.set(Math.sin(angle),0,Math.cos(angle));
         camPos.copy(local.pos).addScaledVector(back,-10.8).addScaledVector(UP,4.7+camPitch*4.5);camLook.copy(ball.pos);camLook.y+=.2;
       }else{
-        const height=3.6+camPitch*4;camPos.copy(local.pos).addScaledVector(f,-11.8).addScaledVector(carUp,height).addScaledVector(UP,.8);
-        camLook.copy(local.pos).addScaledVector(f,8).addScaledVector(carUp,1.05);
+        const flat=stableHeading(local,tmpB,followForward);
+        if(flat.lengthSq()>.035)followForward.lerp(flat,1-Math.pow(.0008,dt)).normalize();
+        const height=4.4+camPitch*4;camPos.copy(local.pos).addScaledVector(followForward,-11.8).addScaledVector(UP,height);
+        camLook.copy(local.pos).addScaledVector(followForward,8).addScaledVector(UP,1.25);
       }
       camPos.x=clamp(camPos.x,-HALF_W-GOAL_D+1,HALF_W+GOAL_D-1);camPos.z=clamp(camPos.z,-HALF_L-GOAL_D+1,HALF_L+GOAL_D-1);camPos.y=clamp(camPos.y,1.2,WALL_H+GOAL_D-1);
-      camera.position.lerp(camPos,1-Math.pow(.00008,dt));updateWallVisibility();camera.lookAt(camLook);
+      camera.position.lerp(camPos,1-Math.pow(.00008,dt));updateWallVisibility();camera.up.copy(UP);camera.lookAt(camLook);
       if(cameraShake>.001){camera.position.add(new V3((Math.random()-.5)*cameraShake,(Math.random()-.5)*cameraShake,(Math.random()-.5)*cameraShake));cameraShake*=Math.pow(.025,dt)}
-      const speed=local.vel.length(),fov=86+clamp((speed-4)*.9,0,14)+(local.input.boost?4:0);camera.fov=lerp(camera.fov,fov,1-Math.pow(.002,dt));camera.updateProjectionMatrix();
+      const speed=local.vel.length(),speedRatio=clamp(speed/(MAX_CAR*1.25),0,1),fov=86+18*Math.pow(speedRatio,1.25);
+      camera.fov=lerp(camera.fov,fov,1-Math.pow(.0015,dt));camera.updateProjectionMatrix();
     }
     function setCameraMode(faceBall){
-      ballCam=faceBall;camYaw=0;ballCamBtn.classList.toggle("active",ballCam);followCamBtn.classList.toggle("active",!ballCam);audio(430,.04,"sine",.025);
+      ballCam=faceBall;camYaw=0;
+      if(!ballCam){const f=stableHeading(local,new V3(),followForward);if(f.lengthSq()>.035)followForward.copy(f)}
+      ballCamBtn.classList.toggle("active",ballCam);followCamBtn.classList.toggle("active",!ballCam);audio(430,.04,"sine",.025);if(started)toast(ballCam?"BALL CAMERA":"FOLLOW CAMERA");
     }
     function updateHud(){
       const kmh=Math.round(local.vel.length()*36);speedEl.textContent=kmh;boostValue.textContent=Math.ceil(local.boost);boostEl.style.setProperty("--boostAngle",(local.boost*3.6)+"deg");
@@ -747,19 +763,21 @@
         const boost=audioCtx.createBufferSource(),boostHigh=audioCtx.createBiquadFilter(),boostLow=audioCtx.createBiquadFilter(),boostGain=audioCtx.createGain();
         boost.buffer=buffer;boost.loop=true;boostHigh.type="highpass";boostHigh.frequency.value=58;boostLow.type="lowpass";boostLow.Q.value=.7;boostGain.gain.value=0;
         boost.connect(boostHigh).connect(boostLow).connect(boostGain).connect(master);boost.start();
-        driveAudio={master,engine,sub,engineGain,engineFilter,boost,boostGain,boostLow};
+        driveAudio={master,engine,sub,subGain,engineGain,engineFilter,boost,boostGain,boostLow};
       }catch(e){}
     }
     function updateDriveAudio(){
       if(!driveAudio)return;
       const now=audioCtx.currentTime,active=started&&menu.classList.contains("hidden")&&!local.demolished,speed=local.vel.length(),speedN=clamp(speed/MAX_CAR,0,1.2),load=Math.abs(local.input.throttle);
-      const base=38+speedN*83+load*14+(local.onGround?0:7);
-      driveAudio.engine.frequency.setTargetAtTime(base,now,.055);driveAudio.sub.frequency.setTargetAtTime(base*.505,now,.07);
-      driveAudio.engineFilter.frequency.setTargetAtTime(260+speedN*760+load*160,now,.08);
-      driveAudio.engineGain.gain.setTargetAtTime(active?(.055+speedN*.055+load*.022):0,now,.09);
-      const boosting=active&&local.input.boost&&local.boost>.05;
-      driveAudio.boostLow.frequency.setTargetAtTime(430+speedN*760,now,.08);
-      driveAudio.boostGain.gain.setTargetAtTime(boosting ? .095 : 0,now,boosting ? .07 : .16);
+      const gearPos=clamp(speedN,0,1.05)*4.25,gear=Math.min(4,Math.floor(gearPos)),rev=gearPos-gear,t=performance.now()/1000;
+      const wobble=Math.sin(t*2.3)*1.4+Math.sin(t*.71)*1.1,base=37+rev*55+gear*2.4+load*7+(local.onGround?0:5)+wobble;
+      driveAudio.engine.frequency.setTargetAtTime(base,now,.085);driveAudio.sub.frequency.setTargetAtTime(base*.505,now,.11);
+      driveAudio.subGain.gain.setTargetAtTime(.25+(1-clamp(speedN,0,1))*.13,now,.14);
+      driveAudio.engineFilter.frequency.setTargetAtTime(235+rev*310+speedN*320+load*120,now,.11);
+      driveAudio.engineGain.gain.setTargetAtTime(active?(.024+speedN*.027+load*.018):0,now,.13);
+      const boosting=active&&local.boostSpool>.025;
+      driveAudio.boostLow.frequency.setTargetAtTime(390+speedN*610+local.boostSpool*150,now,.12);
+      driveAudio.boostGain.gain.setTargetAtTime(boosting ? .068*local.boostSpool : 0,now,boosting ? .11 : .2);
     }
     function audio(freq,dur,type="sine",vol=.03){
       try{audioCtx=audioCtx||new (window.AudioContext||window.webkitAudioContext)();const o=audioCtx.createOscillator(),g=audioCtx.createGain();o.type=type;o.frequency.setValueAtTime(freq,audioCtx.currentTime);
@@ -783,7 +801,7 @@
     joinCode.addEventListener("keydown",e=>{if(e.key==="Enter")joinRoom()});
     document.addEventListener("keydown",e=>{
       keys[e.code]=true;if(["Space","ArrowUp","ArrowDown","ArrowLeft","ArrowRight"].includes(e.code))e.preventDefault();
-      if(e.code==="KeyF")setCameraMode(!ballCam);
+      if(!e.repeat&&(e.code==="KeyC"||e.code==="KeyF"))setCameraMode(!ballCam);
       if(e.code==="KeyR"&&practice){resetKickoff();toast("KICKOFF RESET")}
       if(started&&(e.code==="KeyM"||e.code==="Escape")){menu.classList.remove("hidden");hud.classList.remove("live")}
     });
