@@ -85,7 +85,7 @@
     // Rocket League measurements, scaled from Unreal units at 100 uu = 1 world unit.
     const STEP=1/120, G=6.5, MAX_CAR=23, NO_BOOST_MAX=14.1, SUPERSONIC=22, BOOST_ACCEL_GROUND=9.91666,
       BOOST_ACCEL_AIR=10.58333, BOOST_DRAIN=33.3, BOOST_REGEN=25, AIR_THROTTLE=.66667, JUMP_IMPULSE=2.91667, JUMP_HOLD_ACCEL=14.6,
-      BRAKE=35, COAST=5.25, BALL_R=.9125, BALL_MAX=60, FIELD_W=81.92, FIELD_L=102.4, WALL_H=20.44, WALL_CURVE=4.2,
+      BRAKE=35, COAST=2.4, BALL_R=.9125, BALL_MAX=60, FIELD_W=81.92, FIELD_L=102.4, WALL_H=20.44, WALL_CURVE=4.2,
       GOAL_W=17.86, GOAL_H=6.42, GOAL_D=8.8, CAR_R=1.3, CAR_REST=.42, DEMO_RESPAWN=2.6;
     const HALF_W=FIELD_W/2,HALF_L=FIELD_L/2;
     const V3=THREE.Vector3,Q4=THREE.Quaternion,UP=new V3(0,1,0),XAX=new V3(1,0,0),YAX=new V3(0,1,0),ZNEG=new V3(0,0,-1);
@@ -283,7 +283,7 @@
 
     function newCar(team=0,id=""){
       return{id,team,mesh:makeCar(team),pos:new V3(0,CAR_REST,0),vel:new V3(),q:new Q4(),ang:new V3(),groundNormal:new V3(0,1,0),boost:100,onGround:true,
-        jumpAt:-99,jumpHeld:0,jumped:false,doubleUsed:false,dodgeUntil:0,lastPad:-1,lastBoostAt:-99,demolished:false,respawnAt:0,lastRespawnSecond:-1,
+        jumpAt:-99,jumpHeld:0,jumped:false,doubleUsed:false,dodgeUntil:0,impactSlipUntil:0,lastBumpAt:-99,lastPad:-1,lastBoostAt:-99,demolished:false,respawnAt:0,lastRespawnSecond:-1,
         input:{throttle:0,steer:0,pitch:0,yaw:0,roll:0,dodgeX:0,dodgeZ:0,boost:false,jump:false,slide:false},
         targetPos:new V3(),targetVel:new V3(),targetQ:new Q4(),lastSeen:performance.now(),bot:false};
     }
@@ -291,7 +291,7 @@
     const ball={pos:new V3(0,BALL_R,0),vel:new V3(),ang:new V3(.3,0,.25),lastHost:new V3(),lastHit:0,inGoal:0};
     const remotes=new Map();const keys={};let jumpPressed=false,ballCam=true,started=false,practice=true,kickoff=3,matchTime=180,gameOver=false,overtime=false,lastClockSecond=180;
     let blueScore=0,orangeScore=0,lastFrame=performance.now(),accumulator=0,sendTimer=0,ballSendTimer=0,netTimer=0,frame=0,camYaw=0,camPitch=.18,cameraShake=0;
-    let audioCtx,peer,hostConn=null,isHost=true,hostId="",connectedPeers=new Map(),localFile=location.protocol==="file:",rtt=0,pingAt=0;
+    let audioCtx,driveAudio=null,peer,hostConn=null,isHost=true,hostId="",connectedPeers=new Map(),localFile=location.protocol==="file:",rtt=0,pingAt=0;
     const bot=newCar(1,"ROOKIE");bot.bot=true;
 
     const KICKOFF_SLOTS=[[-20.48,CAR_REST,-25.6],[20.48,CAR_REST,-25.6],[-20.48,CAR_REST,25.6],[20.48,CAR_REST,25.6]];
@@ -299,7 +299,7 @@
       const s=KICKOFF_SLOTS[((slot%KICKOFF_SLOTS.length)+KICKOFF_SLOTS.length)%KICKOFF_SLOTS.length];c.spawnSlot=slot;
       c.pos.set(...s);c.vel.set(0,0,0);c.ang.set(0,0,0);c.groundNormal.copy(UP);
       const aim=tmpA.set(-s[0],0,-s[2]).normalize(),heading=Math.atan2(-aim.x,-aim.z);
-      c.q.setFromAxisAngle(YAX,heading);c.boost=100;c.onGround=true;c.jumped=false;c.doubleUsed=false;c.jumpAt=-99;c.demolished=false;c.respawnAt=0;c.mesh.visible=true;syncCarMesh(c);
+      c.q.setFromAxisAngle(YAX,heading);c.boost=100;c.onGround=true;c.jumped=false;c.doubleUsed=false;c.jumpAt=-99;c.impactSlipUntil=0;c.lastBumpAt=-99;c.demolished=false;c.respawnAt=0;c.mesh.visible=true;syncCarMesh(c);
     }
     function resetKickoff(){
       ball.pos.set(0,BALL_R,0);ball.vel.set(0,0,0);ball.ang.set(.2,0,.3);ball.inGoal=0;
@@ -375,23 +375,24 @@
       const input=c.input,f=forward(c,tmpA),r=right(c,tmpB),u=up(c,tmpC);
       const touching=carSurfaceContact(c),surfaceUp=c.groundNormal;
       if(touching&&u.dot(surfaceUp)>-.25){
+        const impactSliding=now<c.impactSlipUntil;
         c.onGround=true;
         let ff=tmpA.copy(f).addScaledVector(surfaceUp,-f.dot(surfaceUp));
         if(ff.lengthSq()<.01)ff.copy(r).cross(surfaceUp);ff.normalize();
         let rr=tmpB.copy(ff).cross(surfaceUp).normalize(),back=tmpC.copy(ff).negate();
-        tmpM.makeBasis(rr,surfaceUp,back);tmpQ.setFromRotationMatrix(tmpM);c.q.slerp(tmpQ,clamp(dt*15,0,1));c.ang.multiplyScalar(Math.pow(.015,dt));
+        tmpM.makeBasis(rr,surfaceUp,back);tmpQ.setFromRotationMatrix(tmpM);c.q.slerp(tmpQ,clamp(dt*(impactSliding?6:15),0,1));c.ang.multiplyScalar(Math.pow(impactSliding ? .42 : .015,dt));
         ff=forward(c,tmpA);ff.addScaledVector(surfaceUp,-ff.dot(surfaceUp)).normalize();
         rr=tmpB.copy(ff).cross(surfaceUp).normalize();
         let fs=c.vel.dot(ff),ss=c.vel.dot(rr);
-        if(Math.abs(input.throttle)<.01){const d=Math.min(Math.abs(fs),COAST*dt);fs-=Math.sign(fs)*d}
+        if(Math.abs(input.throttle)<.01){const coast=impactSliding ? .35 : (Math.abs(fs)>NO_BOOST_MAX ? .55 : COAST),d=Math.min(Math.abs(fs),coast*dt);fs-=Math.sign(fs)*d}
         else if(fs*input.throttle<-.05)fs+=Math.sign(input.throttle)*BRAKE*dt;
         else fs+=input.throttle*throttleAccel(fs)*dt;
         if(input.boost&&c.boost>0){fs+=BOOST_ACCEL_GROUND*dt;c.boost=Math.max(0,c.boost-BOOST_DRAIN*dt);c.lastBoostAt=now}
-        const grip=input.slide?3.4:20;ss*=Math.exp(-grip*dt);
+        const grip=impactSliding ? .7 : (input.slide?2.8:12);ss*=Math.exp(-grip*dt);
         const speedUU=Math.abs(fs)*100,turn=curvature(speedUU)*speedUU*input.steer*Math.sign(fs||input.throttle||1);
         const steerScale=input.slide?1.42:1;tmpQ.setFromAxisAngle(surfaceUp,-turn*steerScale*dt);c.q.premultiply(tmpQ).normalize();
         c.vel.copy(ff).multiplyScalar(fs).addScaledVector(rr,ss);
-        tmpC.set(0,-G,0).addScaledVector(surfaceUp,G*surfaceUp.y);c.vel.addScaledVector(tmpC,dt);capVelocity(c.vel);
+        tmpC.set(0,-G,0).addScaledVector(surfaceUp,G*surfaceUp.y);c.vel.addScaledVector(tmpC,dt);capVelocity(c.vel,impactSliding?MAX_CAR*1.22:MAX_CAR);
         if(c===local&&jumpPressed){
           c.vel.addScaledVector(surfaceUp,JUMP_IMPULSE);c.onGround=false;c.jumped=true;c.doubleUsed=false;c.jumpAt=now;c.jumpHeld=0;jumpPressed=false;audio(180,.05,"square",.04);
         }
@@ -455,7 +456,22 @@
         else if(aStrike)demolish(b,a,now,true);else demolish(a,b,now,true);return;
       }
       const overlap=min-dist+.01;a.pos.addScaledVector(n,-overlap*.5);b.pos.addScaledVector(n,overlap*.5);
-      if(closing>0){const impulse=closing*.78;a.vel.addScaledVector(n,-impulse*.5);b.vel.addScaledVector(n,impulse*.5);particleBurst(a.pos.clone().lerp(b.pos,.5),0xbfefff,5,2.2,.28)}
+      if(closing>0){
+        const aToward=Math.max(0,a.vel.dot(n)),bToward=Math.max(0,-b.vel.dot(n)),impulse=closing*.86;
+        a.vel.addScaledVector(n,-impulse);b.vel.addScaledVector(n,impulse);
+        const victim=aToward>bToward?b:a,attacker=victim===b?a:b,launch=clamp(.65+closing*.13,.75,3.5);
+        victim.vel.y+=launch;victim.impactSlipUntil=Math.max(victim.impactSlipUntil,now+clamp(.3+closing*.018,.38,.72));
+        attacker.impactSlipUntil=Math.max(attacker.impactSlipUntil,now+.22);
+        const spinAxis=new V3(n.z,.22,-n.x).multiplyScalar(victim===b?1:-1);
+        victim.ang.addScaledVector(spinAxis,clamp(closing*.16,.8,3.8));attacker.ang.addScaledVector(spinAxis,-clamp(closing*.045,.2,1));
+        capVelocity(a.vel,MAX_CAR*1.22);capVelocity(b.vel,MAX_CAR*1.22);
+        const impactPoint=a.pos.clone().lerp(b.pos,.5);particleBurst(impactPoint,0xbfefff,8,3.4,.36,new V3(0,1.2,0));
+        if(a===local||b===local)audio(54+Math.min(42,closing*2),.12,"triangle",.055);
+        if(allowDemo&&now-Math.max(a.lastBumpAt,b.lastBumpAt)>.12){
+          a.lastBumpAt=b.lastBumpAt=now;
+          broadcast({t:"bump",cars:[{id:a.id,v:a.vel.toArray(),w:a.ang.toArray()},{id:b.id,v:b.vel.toArray(),w:b.ang.toArray()}],slip:clamp(.3+closing*.018,.38,.72)});
+        }
+      }
     }
     function resolveCarCollisions(now){
       if(isHost){
@@ -590,6 +606,12 @@
       else if(d.t==="hit"&&isHost){
         const c=remotes.get(from);if(c&&c.pos.distanceTo(new V3().fromArray(d.p))<4.1){ball.pos.fromArray(d.p);ball.vel.fromArray(d.v);capVelocity(ball.vel,BALL_MAX)}
       }else if(d.t==="goal"){blueScore=d.blueScore;orangeScore=d.orangeScore;matchTime=d.matchTime;overtime=!!d.overtime;updateScore();announce((d.team===0?"BLUE":"ORANGE")+" SCORES",2100);kickoff=99;if(overtime)gameOver=true}
+      else if(d.t==="bump"&&!isHost){
+        const now=performance.now()/1000;
+        for(const state of d.cars||[]){const c=state.id===myId?local:remotes.get(state.id);if(!c||c.demolished)continue;
+          c.vel.fromArray(state.v);if(c!==local)c.targetVel.copy(c.vel);if(state.w)c.ang.fromArray(state.w);c.impactSlipUntil=Math.max(c.impactSlipUntil,now+(d.slip||.45));
+        }
+      }
       else if(d.t==="demo"&&!isHost){
         const victim=d.victim===myId?local:d.victim===bot.id?bot:remotes.get(d.victim);
         if(victim){victim.pos.fromArray(d.p);demolish(victim,{id:d.by,team:d.team},performance.now()/1000,false);victim.respawnAt=performance.now()/1000+(d.respawn||DEMO_RESPAWN)}
@@ -708,10 +730,39 @@
     function animate(nowMs){
       requestAnimationFrame(animate);const dt=Math.min(.05,(nowMs-lastFrame)/1000);lastFrame=nowMs;accumulator=Math.min(.1,accumulator+dt);
       while(accumulator>=STEP){tick(STEP,nowMs/1000);accumulator-=STEP}
-      renderRemotes(dt);updateEffects(dt);updateCamera(dt);updateHud();renderer.render(scene,camera);
+      renderRemotes(dt);updateEffects(dt);updateDriveAudio();updateCamera(dt);updateHud();renderer.render(scene,camera);
+    }
+    function ensureDriveAudio(){
+      if(driveAudio)return;
+      try{
+        audioCtx=audioCtx||new (window.AudioContext||window.webkitAudioContext)();
+        const master=audioCtx.createGain(),compressor=audioCtx.createDynamicsCompressor();master.gain.value=.18;
+        compressor.threshold.value=-22;compressor.knee.value=18;compressor.ratio.value=3;compressor.attack.value=.008;compressor.release.value=.18;master.connect(compressor).connect(audioCtx.destination);
+        const engineGain=audioCtx.createGain(),engineFilter=audioCtx.createBiquadFilter();engineGain.gain.value=0;engineFilter.type="lowpass";engineFilter.Q.value=.75;engineGain.connect(engineFilter).connect(master);
+        const real=new Float32Array(7),imag=new Float32Array(7);imag[1]=1;imag[2]=.48;imag[3]=.24;imag[4]=.13;imag[5]=.07;imag[6]=.035;
+        const wave=audioCtx.createPeriodicWave(real,imag,{disableNormalization:false}),engine=audioCtx.createOscillator(),sub=audioCtx.createOscillator(),subGain=audioCtx.createGain();
+        engine.setPeriodicWave(wave);sub.type="triangle";subGain.gain.value=.34;engine.connect(engineGain);sub.connect(subGain).connect(engineGain);engine.start();sub.start();
+        const seconds=2,buffer=audioCtx.createBuffer(1,audioCtx.sampleRate*seconds,audioCtx.sampleRate),data=buffer.getChannelData(0);let brown=0;
+        for(let i=0;i<data.length;i++){brown=brown*.965+(Math.random()*2-1)*.035;data[i]=clamp(brown*3.1,-1,1)}
+        const boost=audioCtx.createBufferSource(),boostHigh=audioCtx.createBiquadFilter(),boostLow=audioCtx.createBiquadFilter(),boostGain=audioCtx.createGain();
+        boost.buffer=buffer;boost.loop=true;boostHigh.type="highpass";boostHigh.frequency.value=58;boostLow.type="lowpass";boostLow.Q.value=.7;boostGain.gain.value=0;
+        boost.connect(boostHigh).connect(boostLow).connect(boostGain).connect(master);boost.start();
+        driveAudio={master,engine,sub,engineGain,engineFilter,boost,boostGain,boostLow};
+      }catch(e){}
+    }
+    function updateDriveAudio(){
+      if(!driveAudio)return;
+      const now=audioCtx.currentTime,active=started&&menu.classList.contains("hidden")&&!local.demolished,speed=local.vel.length(),speedN=clamp(speed/MAX_CAR,0,1.2),load=Math.abs(local.input.throttle);
+      const base=38+speedN*83+load*14+(local.onGround?0:7);
+      driveAudio.engine.frequency.setTargetAtTime(base,now,.055);driveAudio.sub.frequency.setTargetAtTime(base*.505,now,.07);
+      driveAudio.engineFilter.frequency.setTargetAtTime(260+speedN*760+load*160,now,.08);
+      driveAudio.engineGain.gain.setTargetAtTime(active?(.055+speedN*.055+load*.022):0,now,.09);
+      const boosting=active&&local.input.boost&&local.boost>.05;
+      driveAudio.boostLow.frequency.setTargetAtTime(430+speedN*760,now,.08);
+      driveAudio.boostGain.gain.setTargetAtTime(boosting ? .095 : 0,now,boosting ? .07 : .16);
     }
     function audio(freq,dur,type="sine",vol=.03){
-      try{audioCtx=audioCtx||new (AudioContext||webkitAudioContext)();const o=audioCtx.createOscillator(),g=audioCtx.createGain();o.type=type;o.frequency.setValueAtTime(freq,audioCtx.currentTime);
+      try{audioCtx=audioCtx||new (window.AudioContext||window.webkitAudioContext)();const o=audioCtx.createOscillator(),g=audioCtx.createGain();o.type=type;o.frequency.setValueAtTime(freq,audioCtx.currentTime);
         o.frequency.exponentialRampToValueAtTime(Math.max(30,freq*.58),audioCtx.currentTime+dur);g.gain.setValueAtTime(vol,audioCtx.currentTime);g.gain.exponentialRampToValueAtTime(.0001,audioCtx.currentTime+dur);
         o.connect(g).connect(audioCtx.destination);o.start();o.stop(audioCtx.currentTime+dur)}catch(e){}
     }
@@ -726,7 +777,7 @@
     function minuteMarkerSound(){audio(520,.16,"sine",.04);setTimeout(()=>audio(690,.2,"sine",.035),120)}
     function toast(s){toastEl.textContent=s;toastEl.classList.add("show");clearTimeout(toast.timer);toast.timer=setTimeout(()=>toastEl.classList.remove("show"),1400)}
 
-    playBtn.onclick=()=>{started=true;practice=remotes.size===0;bot.mesh.visible=practice;menu.classList.add("hidden");hud.classList.add("live");audioCtx?.resume();if(isHost)resetKickoff();setStatus()};
+    playBtn.onclick=()=>{started=true;practice=remotes.size===0;bot.mesh.visible=practice;menu.classList.add("hidden");hud.classList.add("live");ensureDriveAudio();audioCtx?.resume();if(isHost)resetKickoff();setStatus()};
     copyBtn.onclick=copyInvite;copySmall.onclick=copyInvite;joinOpenBtn.onclick=()=>joinRow.style.display=joinRow.style.display==="flex"?"none":"flex";joinBtn.onclick=joinRoom;
     ballCamBtn.onclick=()=>setCameraMode(true);followCamBtn.onclick=()=>setCameraMode(false);
     joinCode.addEventListener("keydown",e=>{if(e.key==="Enter")joinRoom()});
