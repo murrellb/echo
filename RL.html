@@ -36,7 +36,7 @@
     #toast{position:fixed;z-index:40;left:50%;top:14%;transform:translateX(-50%) translateY(-8px);opacity:0;transition:.18s;background:#081626;border:1px solid #33506c;padding:10px 13px;color:#dcecff;font-size:12px}#toast.show{opacity:1;transform:translateX(-50%)}
     #net{position:absolute;left:22px;top:22px;width:240px;font:10px/1.45 ui-monospace,monospace;color:#819ab6}.dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:7px;background:#ffd25b;box-shadow:0 0 9px currentColor}.dot.ok{background:#67ff9a}.dot.bad{background:#ff5f75}
     #controls{position:absolute;right:20px;top:22px;text-align:right;font:10px/1.65 ui-monospace,monospace;color:#7c91aa}
-    #mobileIntro,#mobileControls,#rotatePhone{display:none}
+    #mobileIntro,#mobileControls,#launchCenter{display:none}
     #mobileControls{position:fixed;inset:0;z-index:14;pointer-events:none;touch-action:none}
     .mobileAction,.mobileUtility{position:absolute;pointer-events:auto;touch-action:none;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent}
     .mobileAction{top:max(118px,calc(env(safe-area-inset-top) + 92px));width:94px;height:94px;border-radius:50%;padding:0;color:#fff;border:2px solid rgba(255,255,255,.5);background:rgba(5,18,34,.64);box-shadow:0 10px 34px rgba(0,0,0,.45),inset 0 0 22px rgba(255,255,255,.08);font-size:13px;backdrop-filter:blur(5px)}
@@ -44,13 +44,18 @@
     .mobileUtility{bottom:max(82px,calc(env(safe-area-inset-bottom) + 66px));padding:10px 12px;border-radius:18px;background:rgba(4,14,28,.7);border:1px solid rgba(255,255,255,.24);color:#c9ddf2;font:800 10px/1 ui-monospace,monospace;letter-spacing:.08em}
     #mobileRecenter{left:50%;transform:translateX(-50%)}#mobileCamera{right:max(16px,env(safe-area-inset-right))}
     #tiltStatus{position:absolute;left:50%;bottom:max(132px,calc(env(safe-area-inset-bottom) + 116px));transform:translateX(-50%);min-width:170px;text-align:center;color:#9db6cf;font:800 9px/1.35 ui-monospace,monospace;letter-spacing:.12em;text-shadow:0 2px 6px #000}
-    #tiltStatus.ready{color:var(--lime)}#rotatePhone{position:fixed;inset:0;z-index:60;place-items:center;text-align:center;padding:30px;background:#020711;color:#d8e8f7;font-weight:900;letter-spacing:.08em}
+    #tiltStatus.ready{color:var(--lime)}
     body.mobile{touch-action:none}body.mobile #mobileIntro{display:block;margin-top:16px;padding:12px 14px;background:rgba(41,200,255,.08);border:1px solid rgba(41,200,255,.24);color:#a9c6df;font-size:12px;line-height:1.5}
-    body.mobile #mobileIntro strong{display:block;color:#dff5ff;letter-spacing:.06em;margin-bottom:4px}body.mobile #mobileControls.live{display:block}
+    body.mobile #mobileIntro strong{display:block;color:#dff5ff;letter-spacing:.06em;margin-bottom:4px}body.mobile #launchCenter{display:block;width:100%;margin-top:10px;padding:10px}body.mobile #mobileControls.live{display:block}
     body.mobile .panel{width:min(520px,calc(100vw - 22px));max-height:calc(100dvh - 20px);overflow:auto;padding:21px}body.mobile h1{font-size:clamp(48px,17vw,76px)}body.mobile .fine{display:none}
     body.mobile #net,body.mobile #controls{display:none}body.mobile #status{top:74px;white-space:nowrap}body.mobile #scorebar{top:max(10px,env(safe-area-inset-top));grid-template-columns:56px 76px 56px}.mobile .score{font-size:27px;padding:5px}.mobile #clock{font-size:14px;padding:10px 5px}
     body.mobile #bottom{left:15px;right:15px;bottom:max(15px,env(safe-area-inset-bottom))}body.mobile #boost{width:90px;height:90px}body.mobile #boostValue{font-size:30px}body.mobile #boostLabel{top:59px}body.mobile #speed strong{font-size:35px}body.mobile #ballCam{bottom:max(18px,env(safe-area-inset-bottom));font-size:9px}
-    @media(orientation:landscape) and (pointer:coarse){body.mobile #rotatePhone{display:grid}}
+    @media(orientation:landscape) and (pointer:coarse){
+      body.mobile .panel{width:min(780px,calc(100vw - 20px));max-height:calc(100dvh - 14px);padding:15px 20px}body.mobile h1{font-size:46px;margin:8px 0 12px}body.mobile .intro{margin-bottom:12px;font-size:12px}
+      body.mobile .mobileAction{top:50%;width:86px;height:86px;transform:translateY(-50%)}body.mobile .mobileAction.pressed{transform:translateY(-50%) scale(.94)}
+      body.mobile .mobileUtility{bottom:max(12px,env(safe-area-inset-bottom))}body.mobile #mobileCamera{right:118px}body.mobile #tiltStatus{bottom:max(55px,calc(env(safe-area-inset-bottom) + 42px))}
+      body.mobile #ballCam{display:none}body.mobile #status{top:57px}body.mobile #bottom{bottom:max(8px,env(safe-area-inset-bottom))}
+    }
     @media(max-width:700px){.panel{padding:23px}.fine{font-size:10px}#controls,#net{display:none}#bottom{left:18px;right:18px}#boost{width:104px;height:104px}#boostValue{font-size:34px}#boostLabel{top:67px}}
   </style>
 </head>
@@ -69,7 +74,9 @@
       <div id="inviteRow"><input type="text" id="invite" readonly><button type="button" class="secondary" id="copySmall">COPY</button></div>
       <div id="joinRow"><input type="text" id="joinCode" placeholder="PASTE ROOM CODE OR INVITE"><button type="button" class="secondary" id="joinBtn">JOIN</button></div>
       <div class="cameraOptions"><span>CAMERA</span><button type="button" class="secondary active" id="ballCamBtn">FACE BALL</button><button type="button" class="secondary" id="followCamBtn">3RD-PERSON FOLLOW</button></div>
-      <div id="mobileIntro"><strong>PORTRAIT TILT CONTROLS</strong>Hold the phone comfortably while seated. Tilt forward/back to drive; tilt left/right to steer or yaw. You will calibrate when play begins.</div>
+      <div id="mobileIntro"><strong>TILT CONTROLS</strong>Hold the phone comfortably in portrait or landscape, then center it. Tilt to drive; after jumping, pitch and yaw are relative to your takeoff pose. A sideways second jump performs a roll dodge.
+        <button type="button" class="secondary" id="launchCenter">CENTER CURRENT POSITION</button>
+      </div>
       <p class="fine"><kbd>ARROWS</kbd> drive / aerial pitch-yaw / directional dodge &nbsp; <kbd>A/D</kbd> air roll &nbsp; <kbd>SHIFT</kbd> boost &nbsp; <kbd>SPACE</kbd> jump / dodge &nbsp; <kbd>CTRL</kbd> powerslide &nbsp; <kbd>C / F</kbd> camera &nbsp; <kbd>R</kbd> reset in practice &nbsp; Gamepad supported.</p>
     </section>
   </div>
@@ -89,7 +96,6 @@
     <button type="button" class="mobileUtility" id="mobileRecenter">RECENTER TILT</button>
     <button type="button" class="mobileUtility" id="mobileCamera">FOLLOW CAM</button>
   </div>
-  <div id="rotatePhone">ROTATE TO PORTRAIT<br><small>WRECK-IT LAG USES PORTRAIT TILT</small></div>
   <div id="toast"></div>
 
   <script src="https://cdn.jsdelivr.net/npm/three@0.160.1/build/three.min.js"></script>
@@ -104,12 +110,13 @@
       menuText=$("#menuText"),blueScoreEl=$("#blueScore"),orangeScoreEl=$("#orangeScore"),clockEl=$("#clock"),centerMessage=$("#centerMessage"),
       netDot=$("#netDot"),roomState=$("#roomState"),netEl=$("#net"),speedEl=$("#speed strong"),boostEl=$("#boost"),boostValue=$("#boostValue"),fovReadout=$("#fovReadout"),
       ballCamEl=$("#ballCam"),toastEl=$("#toast"),mobileControls=$("#mobileControls"),mobileBoost=$("#mobileBoost"),mobileJump=$("#mobileJump"),
-      mobileRecenter=$("#mobileRecenter"),mobileCamera=$("#mobileCamera"),tiltStatus=$("#tiltStatus");
+      mobileRecenter=$("#mobileRecenter"),mobileCamera=$("#mobileCamera"),tiltStatus=$("#tiltStatus"),launchCenter=$("#launchCenter");
     if(!window.THREE||!window.Peer){loading.textContent="ENGINE LOAD FAILED — INTERNET REQUIRED ON FIRST OPEN";return}
     const isPhone=navigator.userAgentData?.mobile===true||/Android.+Mobile|iPhone|iPod|Windows Phone/i.test(navigator.userAgent)||
       (navigator.maxTouchPoints>1&&Math.min(innerWidth,innerHeight)<=600&&matchMedia("(pointer:coarse)").matches);
     const mobileInput={enabled:false,listening:false,calibrated:false,calibrating:false,boost:false,jump:false,jumpQueued:false,throttle:0,steer:0,
-      neutralBeta:0,neutralGamma:0,smoothBeta:0,smoothGamma:0,samples:0,sumBeta:0,sumGamma:0,lastEvent:0,lastHud:0};
+      neutralBeta:0,neutralGamma:0,smoothBeta:0,smoothGamma:0,screenForward:0,screenRight:0,airOriginForward:0,airOriginRight:0,airReferenced:false,
+      samples:0,sumBeta:0,sumGamma:0,lastEvent:0,lastHud:0};
     document.body.classList.toggle("mobile",isPhone);if(isPhone)playBtn.textContent="ENABLE TILT & PLAY";
 
     // Rocket League measurements, scaled from Unreal units at 100 uu = 1 world unit.
@@ -330,7 +337,7 @@
       c.pos.set(...s);c.vel.set(0,0,0);c.ang.set(0,0,0);c.groundNormal.copy(UP);
       const aim=tmpA.set(-s[0],0,-s[2]).normalize(),heading=Math.atan2(-aim.x,-aim.z);
       c.q.setFromAxisAngle(YAX,heading);c.boost=100;c.boostSpool=0;c.onGround=true;c.jumped=false;c.doubleUsed=false;c.jumpAt=-99;c.impactSlipUntil=0;c.lastBumpAt=-99;c.demolished=false;c.respawnAt=0;c.mesh.visible=true;
-      if(c===local){const facing=forward(c,new V3()).setY(0);if(facing.lengthSq()>.001)followForward.copy(facing.normalize())}
+      if(c===local){mobileInput.airReferenced=false;const facing=forward(c,new V3()).setY(0);if(facing.lengthSq()>.001)followForward.copy(facing.normalize())}
       syncCarMesh(c);
     }
     function resetKickoff(){
@@ -401,10 +408,24 @@
       const magnitude=Math.abs(value);if(magnitude<=deadZone)return 0;
       const normalized=clamp((magnitude-deadZone)/(fullScale-deadZone),0,1);return Math.sign(value)*Math.pow(normalized,1.12);
     }
+    function displayRotation(){
+      const raw=screen.orientation?.angle??window.orientation??0;
+      return ((Math.round(raw/90)*90)%360+360)%360;
+    }
+    function screenRelativeTilt(beta,gamma){
+      switch(displayRotation()){
+        case 90:return{forward:-gamma,right:-beta};
+        case 180:return{forward:beta,right:-gamma};
+        case 270:return{forward:gamma,right:beta};
+        default:return{forward:-beta,right:gamma};
+      }
+    }
     function beginTiltCalibration(){
       if(!isPhone||!mobileInput.enabled)return;
-      Object.assign(mobileInput,{calibrated:false,calibrating:true,samples:0,sumBeta:0,sumGamma:0,smoothBeta:0,smoothGamma:0,throttle:0,steer:0,lastEvent:0});
+      Object.assign(mobileInput,{calibrated:false,calibrating:true,samples:0,sumBeta:0,sumGamma:0,smoothBeta:0,smoothGamma:0,screenForward:0,screenRight:0,
+        throttle:0,steer:0,airReferenced:false,lastEvent:0,lastHud:0});
       tiltStatus.classList.remove("ready");tiltStatus.textContent="HOLD COMFORTABLY · CALIBRATING";
+      launchCenter.textContent="HOLD STILL · CENTERING";
     }
     function onDeviceOrientation(e){
       if(document.hidden||!mobileInput.calibrating&&!mobileInput.calibrated||!Number.isFinite(e.beta)||!Number.isFinite(e.gamma))return;
@@ -412,13 +433,16 @@
         mobileInput.sumBeta+=e.beta;mobileInput.sumGamma+=e.gamma;if(++mobileInput.samples>=24){
           mobileInput.neutralBeta=mobileInput.sumBeta/mobileInput.samples;mobileInput.neutralGamma=mobileInput.sumGamma/mobileInput.samples;
           mobileInput.calibrating=false;mobileInput.calibrated=true;mobileInput.lastEvent=e.timeStamp;tiltStatus.classList.add("ready");tiltStatus.textContent="TILT READY";
+          launchCenter.textContent="CENTERED · TAP TO RECENTER";
         }
         return;
       }
       const dt=clamp((e.timeStamp-mobileInput.lastEvent)/1000,.005,.08),alpha=1-Math.exp(-dt/.09);mobileInput.lastEvent=e.timeStamp;
       const beta=signedAngleDelta(e.beta,mobileInput.neutralBeta),gamma=e.gamma-mobileInput.neutralGamma;
       mobileInput.smoothBeta+=alpha*(beta-mobileInput.smoothBeta);mobileInput.smoothGamma+=alpha*(gamma-mobileInput.smoothGamma);
-      mobileInput.throttle=tiltAxis(-mobileInput.smoothBeta,2.6,20);mobileInput.steer=tiltAxis(mobileInput.smoothGamma,2.4,17);
+      const tilt=screenRelativeTilt(mobileInput.smoothBeta,mobileInput.smoothGamma);
+      mobileInput.screenForward=tilt.forward;mobileInput.screenRight=tilt.right;
+      mobileInput.throttle=tiltAxis(tilt.forward,2.6,20);mobileInput.steer=tiltAxis(tilt.right,2.4,17);
       if(e.timeStamp-mobileInput.lastHud>120){
         mobileInput.lastHud=e.timeStamp;const drive=Math.round(Math.abs(mobileInput.throttle)*100),turn=Math.round(Math.abs(mobileInput.steer)*100);
         tiltStatus.textContent=`${mobileInput.throttle>=0?"FWD":"REV"} ${drive}% · ${mobileInput.steer<0?"LEFT":"RIGHT"} ${turn}%`;
@@ -428,30 +452,43 @@
       if(!isPhone||mobileInput.listening===active)return;
       mobileInput.listening=active;window[active?"addEventListener":"removeEventListener"]("deviceorientation",onDeviceOrientation,{passive:true});
     }
-    async function enableMobileTilt(){
+    async function enableMobileTilt(recenter=false){
       if(!isPhone)return true;
-      if(!window.isSecureContext&&location.protocol!=="file:"){tiltStatus.textContent="HTTPS REQUIRED FOR TILT";toast("OPEN OVER HTTPS TO USE TILT");return false}
-      if(typeof window.DeviceOrientationEvent==="undefined"){tiltStatus.textContent="TILT SENSOR UNAVAILABLE";toast("THIS PHONE DOES NOT EXPOSE TILT");return false}
-      try{
-        if(typeof DeviceOrientationEvent.requestPermission==="function"){
-          const permission=await DeviceOrientationEvent.requestPermission();if(permission!=="granted"){tiltStatus.textContent="TILT PERMISSION DENIED";toast("TILT PERMISSION IS REQUIRED");return false}
-        }
-      }catch(e){tiltStatus.textContent="COULD NOT ENABLE TILT";toast("TILT PERMISSION FAILED");return false}
-      mobileInput.enabled=true;setTiltListening(true);beginTiltCalibration();
-      clearTimeout(enableMobileTilt.timer);enableMobileTilt.timer=setTimeout(()=>{if(!mobileInput.calibrated){tiltStatus.textContent="NO TILT DATA · CHECK SENSOR ACCESS";toast("NO ORIENTATION DATA RECEIVED")}},1800);
-      try{await screen.orientation?.lock?.("portrait")}catch(e){}
+      if(!mobileInput.enabled){
+        if(!window.isSecureContext&&location.protocol!=="file:"){tiltStatus.textContent="HTTPS REQUIRED FOR TILT";toast("OPEN OVER HTTPS TO USE TILT");return false}
+        if(typeof window.DeviceOrientationEvent==="undefined"){tiltStatus.textContent="TILT SENSOR UNAVAILABLE";toast("THIS PHONE DOES NOT EXPOSE TILT");return false}
+        try{
+          if(typeof DeviceOrientationEvent.requestPermission==="function"){
+            const permission=await DeviceOrientationEvent.requestPermission();if(permission!=="granted"){tiltStatus.textContent="TILT PERMISSION DENIED";toast("TILT PERMISSION IS REQUIRED");return false}
+          }
+        }catch(e){tiltStatus.textContent="COULD NOT ENABLE TILT";toast("TILT PERMISSION FAILED");return false}
+        mobileInput.enabled=true;
+      }
+      setTiltListening(true);
+      if(recenter||!mobileInput.calibrated&&!mobileInput.calibrating){
+        beginTiltCalibration();
+        clearTimeout(enableMobileTilt.timer);enableMobileTilt.timer=setTimeout(()=>{
+          if(!mobileInput.calibrated){tiltStatus.textContent="NO TILT DATA · CHECK SENSOR ACCESS";launchCenter.textContent="CENTER CURRENT POSITION";toast("NO ORIENTATION DATA RECEIVED")}
+        },1800);
+      }
       return true;
     }
     function readInput(){
       const gp=navigator.getGamepads?.()[0],axis=(i,d=.16)=>{const v=gp?.axes?.[i]||0;return Math.abs(v)<d?0:v};
       const throttle=(keys.ArrowUp?1:0)-(keys.ArrowDown?1:0)-(gp?.buttons?.[6]?.value||0)+(gp?.buttons?.[7]?.value||0)+(isPhone?mobileInput.throttle:0);
       local.input.throttle=clamp(throttle,-1,1);local.input.steer=clamp((keys.ArrowRight?1:0)-(keys.ArrowLeft?1:0)+axis(0)+(isPhone?mobileInput.steer:0),-1,1);
-      local.input.pitch=local.input.throttle;local.input.yaw=local.input.steer;
-      local.input.roll=clamp((keys.KeyD?1:0)-(keys.KeyA?1:0)+(keys.KeyE?1:0)-(keys.KeyQ?1:0)+(gp?.buttons?.[3]?.pressed?1:0)-(gp?.buttons?.[2]?.pressed?1:0),-1,1);
-      local.input.dodgeX=local.input.steer;
-      local.input.dodgeZ=local.input.throttle;
+      const nowJump=!!(keys.Space||gp?.buttons?.[0]?.pressed||(isPhone&&mobileInput.jump)),jumpEdge=(nowJump&&!local.input.jump)||mobileInput.jumpQueued;
+      if(isPhone&&jumpEdge&&local.onGround){
+        mobileInput.airOriginForward=mobileInput.screenForward;mobileInput.airOriginRight=mobileInput.screenRight;mobileInput.airReferenced=true;
+      }
+      const relativeAir=isPhone&&!local.onGround&&mobileInput.airReferenced;
+      local.input.pitch=relativeAir?tiltAxis(mobileInput.screenForward-mobileInput.airOriginForward,2.2,16):local.input.throttle;
+      local.input.yaw=relativeAir?tiltAxis(mobileInput.screenRight-mobileInput.airOriginRight,2.2,15):local.input.steer;
+      local.input.roll=isPhone?0:clamp((keys.KeyD?1:0)-(keys.KeyA?1:0)+(keys.KeyE?1:0)-(keys.KeyQ?1:0)+(gp?.buttons?.[3]?.pressed?1:0)-(gp?.buttons?.[2]?.pressed?1:0),-1,1);
+      local.input.dodgeX=local.input.yaw;
+      local.input.dodgeZ=local.input.pitch;
       local.input.boost=!!(keys.ShiftLeft||keys.ShiftRight||gp?.buttons?.[5]?.pressed||(isPhone&&mobileInput.boost));local.input.slide=!!(keys.ControlLeft||keys.ControlRight||gp?.buttons?.[4]?.pressed);
-      const nowJump=!!(keys.Space||gp?.buttons?.[0]?.pressed||(isPhone&&mobileInput.jump));if((nowJump&&!local.input.jump)||mobileInput.jumpQueued)jumpPressed=true;mobileInput.jumpQueued=false;local.input.jump=nowJump;
+      if(jumpEdge)jumpPressed=true;mobileInput.jumpQueued=false;local.input.jump=nowJump;
       const rx=axis(2),ry=axis(3);if(Math.abs(rx)+Math.abs(ry)>.02){camYaw-=rx*.045;camPitch=clamp(camPitch+ry*.025,-.1,.65)}
     }
     function simulateCar(c,dt,now){
@@ -488,7 +525,9 @@
         if(input.throttle)c.vel.addScaledVector(f,input.throttle*AIR_THROTTLE*dt);
         if(boostRequested){c.vel.addScaledVector(f,BOOST_ACCEL_AIR*boostPower*dt);c.boost=Math.max(0,c.boost-BOOST_DRAIN*boostBurn*dt);c.lastBoostAt=now}
         if(c.jumped&&input.jump&&c.jumpHeld<.2){c.vel.addScaledVector(u,JUMP_HOLD_ACCEL*dt);c.jumpHeld+=dt}
-        const pitch=-input.pitch*12.46,yaw=-input.yaw*9.11,roll=input.roll*22;
+        const willMobileDodge=isPhone&&c===local&&jumpPressed&&c.jumped&&!c.doubleUsed&&now-c.jumpAt<1.45&&Math.hypot(input.dodgeX,input.dodgeZ)>.22;
+        const mobileDodgeLock=isPhone&&c===local&&(now<c.dodgeUntil||willMobileDodge),airControl=mobileDodgeLock?0:1;
+        const pitch=-input.pitch*12.46*airControl,yaw=-input.yaw*9.11*airControl,roll=input.roll*22*airControl;
         c.ang.addScaledVector(r,pitch*dt).addScaledVector(u,yaw*dt).addScaledVector(f,roll*dt);
         const airDamping=now<c.dodgeUntil?0.18:1.25;c.ang.multiplyScalar(Math.exp(-airDamping*dt));if(c.ang.length()>5.5)c.ang.setLength(5.5);
         if(c===local&&jumpPressed){
@@ -885,14 +924,15 @@
     }
     if(isPhone){
       bindMobileHold(mobileBoost,"boost");bindMobileHold(mobileJump,"jump");
-      mobileRecenter.addEventListener("pointerdown",async e=>{e.preventDefault();mobileInput.enabled?beginTiltCalibration():await enableMobileTilt()});
+      launchCenter.addEventListener("click",async e=>{e.preventDefault();await enableMobileTilt(true)});
+      mobileRecenter.addEventListener("pointerdown",async e=>{e.preventDefault();await enableMobileTilt(true)});
       mobileCamera.addEventListener("pointerdown",e=>{e.preventDefault();setCameraMode(!ballCam)});
-      window.addEventListener("orientationchange",()=>setTimeout(()=>{if(innerHeight>=innerWidth&&mobileInput.enabled)beginTiltCalibration()},450));
+      window.addEventListener("orientationchange",()=>setTimeout(()=>{if(mobileInput.enabled)beginTiltCalibration()},450));
       document.addEventListener("visibilitychange",()=>{if(document.hidden){setTiltListening(false);mobileInput.boost=mobileInput.jump=false;mobileInput.throttle=mobileInput.steer=0}
         else if(mobileInput.enabled){setTiltListening(true);setTimeout(beginTiltCalibration,350)}});
     }
     playBtn.onclick=async()=>{
-      if(isPhone){ensureDriveAudio();audioCtx?.resume();if(!await enableMobileTilt())return}
+      if(isPhone){ensureDriveAudio();audioCtx?.resume();if(!await enableMobileTilt(false))return}
       started=true;practice=remotes.size===0;bot.mesh.visible=practice;menu.classList.add("hidden");hud.classList.add("live");mobileControls.classList.toggle("live",isPhone);
       if(!isPhone){ensureDriveAudio();audioCtx?.resume()}if(isHost)resetKickoff();setStatus();
     };
