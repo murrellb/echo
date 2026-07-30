@@ -17,7 +17,7 @@
     #menu.hidden{display:none}.panel{width:min(680px,calc(100vw - 30px));padding:34px;border:1px solid rgba(255,255,255,.14);background:linear-gradient(150deg,rgba(12,27,48,.96),rgba(4,11,22,.96));box-shadow:0 30px 100px #000}
     .eyebrow{color:var(--lime);font-size:10px;font-weight:900;letter-spacing:.32em}h1{font-size:clamp(46px,9vw,88px);line-height:.83;letter-spacing:-.07em;margin:14px 0 20px;font-weight:950}h1 span{color:var(--blue)}
     .intro{max-width:570px;color:#b7c4d5;line-height:1.55;margin:0 0 22px}.actions{display:flex;gap:9px;flex-wrap:wrap}
-    button{border:0;padding:13px 18px;font-weight:850;letter-spacing:.055em;cursor:pointer;transition:.16s}.primary{background:var(--lime);color:#071104;box-shadow:0 0 26px rgba(184,255,92,.2)}.primary:hover{transform:translateY(-2px);box-shadow:0 0 34px rgba(184,255,92,.34)}
+    button{border:0;padding:13px 18px;font-weight:850;letter-spacing:.055em;cursor:pointer;transition:.16s}.primary{background:var(--lime);color:#071104;box-shadow:0 0 26px rgba(184,255,92,.2)}.primary:hover{transform:translateY(-2px);box-shadow:0 0 34px rgba(184,255,92,.34)}.primary:disabled{opacity:.4;cursor:wait;transform:none;box-shadow:none}
     .secondary{color:#eef7ff;background:#172841;border:1px solid #29405f}.secondary:hover{background:#203653}.secondary:disabled{opacity:.35;cursor:not-allowed}
     .cameraOptions{display:flex;align-items:center;gap:8px;margin-top:14px;color:#7890ab;font:800 10px/1 ui-monospace,monospace;letter-spacing:.16em}.cameraOptions button{padding:8px 11px;font-size:10px}.cameraOptions button.active{color:#071104;background:var(--lime);border-color:var(--lime)}
     #inviteRow,#joinRow{display:none;gap:8px;margin-top:10px}input{min-width:0;flex:1;padding:11px;background:#030914;border:1px solid #263b58;color:#b9cce2;font-family:ui-monospace,monospace}
@@ -328,7 +328,8 @@
     const ball={pos:new V3(0,BALL_R,0),vel:new V3(),ang:new V3(.3,0,.25),lastHost:new V3(),lastHit:0,inGoal:0};
     const remotes=new Map();const keys={};let jumpPressed=false,ballCam=true,started=false,practice=true,kickoff=3,matchTime=180,gameOver=false,overtime=false,lastClockSecond=180;
     let blueScore=0,orangeScore=0,lastFrame=performance.now(),accumulator=0,sendTimer=0,ballSendTimer=0,netTimer=0,frame=0,camYaw=0,camPitch=.18,cameraShake=0;
-    let audioCtx,driveAudio=null,peer,hostConn=null,isHost=true,hostId="",connectedPeers=new Map(),localFile=location.protocol==="file:",rtt=0,pingAt=0;
+    let audioCtx,driveAudio=null,peer,hostConn=null,isHost=true,hostId="",connectedPeers=new Map(),localFile=location.protocol==="file:",rtt=0,pingAt=0,
+      networkJoined=false,networkEpoch=0,reconnectTimer=0,reconnectAttempts=0;
     const bot=newCar(1,"ROOKIE");bot.bot=true;
 
     const KICKOFF_SLOTS=[[-20.48,CAR_REST,-25.6],[20.48,CAR_REST,-25.6],[-20.48,CAR_REST,25.6],[20.48,CAR_REST,25.6]];
@@ -414,9 +415,9 @@
     }
     function screenRelativeTilt(beta,gamma){
       switch(displayRotation()){
-        case 90:return{forward:-gamma,right:-beta};
+        case 90:return{forward:gamma,right:beta};
         case 180:return{forward:beta,right:-gamma};
-        case 270:return{forward:gamma,right:beta};
+        case 270:return{forward:-gamma,right:-beta};
         default:return{forward:-beta,right:gamma};
       }
     }
@@ -714,17 +715,34 @@
       if(remotes.has(id))return remotes.get(id);const c=newCar(team,id);spawnCar(c,remotes.size);c.targetPos.copy(c.pos);c.targetQ.copy(c.q);remotes.set(id,c);bot.mesh.visible=false;return c;
     }
     function removeRemote(id){const c=remotes.get(id);if(c){scene.remove(c.mesh);remotes.delete(id)}if(!remotes.size)bot.mesh.visible=practice&&!bot.demolished}
-    function send(conn,msg){if(conn?.open)conn.send(msg)}
+    const TRANSIENT_MESSAGES=new Set(["car","ball","game","ping","pong"]);
+    function send(conn,msg){if(conn?.open&&(!TRANSIENT_MESSAGES.has(msg.t)||(conn.bufferSize||0)<12))conn.send(msg)}
     function broadcast(msg,except=""){connectedPeers.forEach((c,id)=>{if(id!==except)send(c,msg)})}
+    function clearConnTimers(conn){
+      if(!conn)return;clearTimeout(conn._openTimer);clearTimeout(conn._handshakeTimer);clearInterval(conn._helloTimer);
+      conn._openTimer=conn._handshakeTimer=conn._helloTimer=0;
+    }
+    function setPlayAvailability(ready){
+      playBtn.disabled=!ready;playBtn.textContent=ready?(isPhone?"ENABLE TILT & PLAY":"PLAY"):"CONNECTING…";
+    }
+    function finishHandshake(){
+      networkJoined=true;reconnectAttempts=0;clearTimeout(reconnectTimer);reconnectTimer=0;clearConnTimers(hostConn);
+    }
     function onData(d,from){
       if(!d||typeof d.t!=="string")return;
       if(d.t==="hello"&&isHost){
-        const blueHumans=1+[...remotes.values()].filter(x=>x.team===0).length,orangeHumans=[...remotes.values()].filter(x=>x.team===1).length;
-        const team=blueHumans<=orangeHumans?0:1,c=ensureRemote(from,team);c.team=team;send(connectedPeers.get(from),{t:"welcome",id:from,team,host:myId,ball:packBall(),blueScore,orangeScore,matchTime,kickoff,spawnSlot:c.spawnSlot,
+        let c=remotes.get(from),joining=!c;
+        if(!c){
+          const blueHumans=1+[...remotes.values()].filter(x=>x.team===0).length,orangeHumans=[...remotes.values()].filter(x=>x.team===1).length;
+          c=ensureRemote(from,blueHumans<=orangeHumans?0:1);
+        }
+        const team=c.team;send(connectedPeers.get(from),{t:"welcome",v:2,id:from,team,host:myId,ball:packBall(),blueScore,orangeScore,matchTime,kickoff,spawnSlot:c.spawnSlot,
           cars:[{id:myId,team:myTeam,...packCar(local)},...[...remotes.values()].filter(x=>x.id!==from).map(x=>({id:x.id,team:x.team,...packCar(x)}))]});
-        broadcast({t:"join",id:from,team},from);setStatus();
-      }else if(d.t==="welcome"){
+        if(joining)broadcast({t:"join",id:from,team},from);setStatus();
+      }else if(d.t==="welcome"&&!isHost&&from===hostId){
+        if(networkJoined)return;finishHandshake();
         myId=d.id;myTeam=d.team;local.id=myId;local.team=myTeam;unpackBall(d.ball,true);blueScore=d.blueScore;orangeScore=d.orangeScore;matchTime=d.matchTime;kickoff=d.kickoff;updateScore();
+        const liveIds=new Set(d.cars.map(x=>x.id));for(const id of [...remotes.keys()])if(!liveIds.has(id))removeRemote(id);
         for(const x of d.cars){const c=ensureRemote(x.id,x.team);unpackCar(c,x,false);c.targetPos.copy(c.pos);c.targetQ.copy(c.q)}
         spawnCar(local,d.spawnSlot);connected();resetLocalMaterial();
       }else if(d.t==="join"){ensureRemote(d.id,d.team);setStatus()}
@@ -755,34 +773,90 @@
       else if(d.t==="ping")send(isHost?connectedPeers.get(from):hostConn,{t:"pong",n:d.n})
       else if(d.t==="pong"){rtt=Date.now()-d.n;netDot.className="dot ok";setStatus()}
     }
-    function setupConn(conn,id){
-      conn.on("open",()=>{connectedPeers.set(id,conn);send(conn,{t:"hello"});setStatus()});conn.on("data",d=>onData(d,id));
-      conn.on("close",()=>{connectedPeers.delete(id);removeRemote(id);if(isHost)broadcast({t:"leave",id});else{netDot.className="dot bad";roomState.textContent="HOST LOST"}});
-      conn.on("error",()=>{});
+    function beginClientHandshake(conn){
+      if(isHost||conn!==hostConn)return;
+      networkJoined=false;netDot.className="dot";setStatus("HANDSHAKING");menuText.textContent="Peer link open. Synchronizing with the host…";
+      const hello=()=>{if(conn===hostConn&&conn.open&&!networkJoined)send(conn,{t:"hello",v:2})};
+      hello();conn._helloTimer=setInterval(hello,450);
+      conn._handshakeTimer=setTimeout(()=>{
+        if(conn===hostConn&&!networkJoined){roomState.textContent="HANDSHAKE TIMEOUT";conn.close();scheduleClientReconnect("HANDSHAKE TIMEOUT")}
+      },9000);
     }
-    function initNetwork(){
-      const hash=decodeURIComponent(location.hash.slice(1));hostId=hash;isHost=!hash;
+    function setupConn(conn,id){
+      const epoch=networkEpoch,hostSide=isHost;
+      conn._openTimer=setTimeout(()=>{if(epoch===networkEpoch&&!conn.open){conn.close();if(!hostSide)scheduleClientReconnect("CONNECTION TIMEOUT")}},10000);
+      conn.on("open",()=>{
+        if(epoch!==networkEpoch){conn.close();return}clearTimeout(conn._openTimer);
+        const previous=connectedPeers.get(id);connectedPeers.set(id,conn);if(previous&&previous!==conn)previous.close();
+        if(hostSide)setStatus();else{hostConn=conn;beginClientHandshake(conn)}
+      });
+      conn.on("data",d=>{if(epoch===networkEpoch&&(hostSide||conn===hostConn))onData(d,id)});
+      conn.on("close",()=>{
+        clearConnTimers(conn);if(epoch!==networkEpoch)return;
+        const wasCurrent=connectedPeers.get(id)===conn;if(wasCurrent)connectedPeers.delete(id);
+        if(hostSide&&wasCurrent){removeRemote(id);broadcast({t:"leave",id});setStatus()}
+        else if(conn===hostConn){networkJoined=false;removeRemote(id);netDot.className="dot bad";setPlayAvailability(false);scheduleClientReconnect("HOST LOST")}
+      });
+      conn.on("error",()=>{
+        if(epoch!==networkEpoch)return;netDot.className="dot bad";
+        if(!hostSide&&conn===hostConn){networkJoined=false;setPlayAvailability(false);scheduleClientReconnect("CONNECTION ERROR")}
+      });
+    }
+    function connectToHost(active,epoch){
+      if(epoch!==networkEpoch||isHost||networkJoined||!active||active.destroyed||active.disconnected)return;
+      if(hostConn&&!hostConn.open){const stale=hostConn;hostConn=null;clearConnTimers(stale);try{stale.close()}catch(e){}}
+      const conn=active.connect(hostId,{reliable:true,serialization:"json",metadata:{game:"wreck-it-lag",v:2}});
+      hostConn=conn;setStatus(reconnectAttempts?"RECONNECTING":"CONNECTING TO HOST");setupConn(conn,hostId);
+    }
+    function scheduleClientReconnect(reason="RECONNECTING"){
+      if(isHost||networkJoined||reconnectTimer)return;
+      netDot.className="dot bad";setPlayAvailability(false);setStatus(reason);menuText.textContent=reason+". Retrying the host automatically…";
+      const delay=Math.min(5000,500*Math.pow(1.65,reconnectAttempts++));
+      reconnectTimer=setTimeout(()=>{
+        reconnectTimer=0;if(isHost||networkJoined)return;
+        if(!peer||peer.destroyed){initNetwork(false);return}
+        if(peer.disconnected){try{peer.reconnect()}catch(e){initNetwork(false)}}else connectToHost(peer,networkEpoch);
+      },delay);
+    }
+    function attachPeerLifecycle(active,epoch){
+      active.on("disconnected",()=>{
+        if(epoch!==networkEpoch||active.destroyed)return;
+        netDot.className="dot bad";setStatus("SIGNALING RECONNECT");clearTimeout(active._signalRetry);
+        active._signalRetry=setTimeout(()=>{if(epoch===networkEpoch&&active.disconnected&&!active.destroyed)try{active.reconnect()}catch(e){}},350);
+      });
+      active.on("error",e=>networkError(e,active,epoch));
+    }
+    function initNetwork(forceHost=null){
+      const epoch=++networkEpoch;clearTimeout(reconnectTimer);reconnectTimer=0;networkJoined=false;reconnectAttempts=0;setPlayAvailability(false);
+      const hash=decodeURIComponent(location.hash.slice(1));hostId=hash;isHost=forceHost===null?!hash:forceHost;
       if(isHost){
         const room="orbit-"+Math.random().toString(36).slice(2,9),active=peer=new Peer(room);
-        active.on("open",id=>{myId=id;local.id=id;hostId=id;if(!localFile)location.hash=encodeURIComponent(id);connected()});
-        active.on("connection",c=>setupConn(c,c.peer));active.on("error",networkError);
+        active.on("open",id=>{if(epoch!==networkEpoch)return;myId=id;local.id=id;hostId=id;if(!localFile)location.hash=encodeURIComponent(id);connected()});
+        active.on("connection",c=>{if(epoch===networkEpoch)setupConn(c,c.peer)});attachPeerLifecycle(active,epoch);
       }else{
-        const active=peer=new Peer();active.on("open",id=>{myId=id;local.id=id;hostConn=active.connect(hostId,{reliable:false,serialization:"json"});setupConn(hostConn,hostId)});
-        active.on("error",networkError);
+        const active=peer=new Peer();active.on("open",id=>{if(epoch!==networkEpoch)return;myId=id;local.id=id;if(networkJoined){netDot.className="dot ok";setStatus()}else connectToHost(active,epoch)});attachPeerLifecycle(active,epoch);
       }
     }
     function connected(){
-      netDot.className="dot ok";invite.value=localFile?hostId:location.href;inviteRow.style.display="flex";copyBtn.disabled=false;setStatus();
-      if(localFile){copyBtn.textContent="COPY ROOM CODE";menuText.textContent="Open this HTML in another tab, choose JOIN ROOM, and paste the room code."}
+      finishHandshake();netDot.className="dot ok";invite.value=localFile?hostId:location.href;inviteRow.style.display="flex";copyBtn.disabled=false;setPlayAvailability(true);setStatus();
+      if(localFile){copyBtn.textContent="COPY ROOM CODE";menuText.textContent=isHost?"Open this HTML on the other device, choose JOIN ROOM, and paste the room code.":"Connected and synchronized with the host. Ready to play."}
+      else if(!isHost)menuText.textContent="Connected and synchronized with the host. Ready to play.";
     }
-    function setStatus(){
-      const n=remotes.size+1;roomState.textContent=(isHost?"HOST":"P2P")+" · "+n+" PLAYER"+(n===1?"":"S")+(rtt?" · "+rtt+" MS":"");
-      netEl.innerHTML=`<span class="dot ${netDot.className.includes("ok")?"ok":""}"></span>${isHost?"HOST AUTHORITY":"CLIENT PREDICTION"}<br>${n} HUMAN${n===1?"":"S"}${bot.mesh.visible?" + ROOKIE BOT":""}`;
+    function setStatus(detail=""){
+      const n=remotes.size+1,mode=isHost?(networkJoined?"HOST":"HOST STARTING"):(networkJoined?"P2P":"CONNECTING");
+      roomState.textContent=detail||(mode+" · "+n+" PLAYER"+(n===1?"":"S")+(rtt&&networkJoined?" · "+rtt+" MS":""));
+      netEl.innerHTML=`<span class="dot ${netDot.className.includes("ok")?"ok":""}"></span>${isHost?"HOST AUTHORITY":networkJoined?"CLIENT PREDICTION":"AWAITING HOST STATE"}<br>${n} HUMAN${n===1?"":"S"}${bot.mesh.visible?" + ROOKIE BOT":""}`;
     }
-    function networkError(e){netDot.className="dot bad";roomState.textContent="NETWORK ERROR";menuText.textContent="Could not open the room: "+(e?.type||"unknown error")}
+    function networkError(e,active,epoch){
+      if(epoch!==networkEpoch||active!==peer)return;const type=e?.type||"unknown error";netDot.className="dot bad";setPlayAvailability(false);
+      if(!isHost&&(type==="peer-unavailable"||type==="network"||type==="socket-error"||type==="socket-closed")){
+        menuText.textContent=type==="peer-unavailable"?"Host not reachable yet. Retrying the room…":"Network interrupted. Reconnecting…";scheduleClientReconnect(type.toUpperCase().replace(/-/g," "));
+      }else{roomState.textContent="NETWORK ERROR";menuText.textContent="Could not open the room: "+type}
+    }
     function joinRoom(){
       let code=joinCode.value.trim();if(code.includes("#"))code=decodeURIComponent(code.split("#").pop());if(!/^orbit-[a-z0-9]+$/i.test(code)){toast("INVALID ROOM");return}
-      try{peer?.destroy()}catch(e){}connectedPeers.clear();remotes.forEach(c=>scene.remove(c.mesh));remotes.clear();hostId=code;isHost=false;location.hash=encodeURIComponent(code);initNetwork();
+      networkEpoch++;clearTimeout(reconnectTimer);reconnectTimer=0;const oldPeer=peer;peer=null;try{oldPeer?.destroy()}catch(e){}
+      connectedPeers.clear();remotes.forEach(c=>scene.remove(c.mesh));remotes.clear();hostId=code;isHost=false;networkJoined=false;location.hash=encodeURIComponent(code);initNetwork(false);
       joinRow.style.display="none";menuText.textContent="Connecting to "+code+"…";
     }
     function resetLocalMaterial(){local.mesh.traverse(o=>{if(o.material===blueMat)o.material=orangeMat})}
@@ -932,6 +1006,7 @@
         else if(mobileInput.enabled){setTiltListening(true);setTimeout(beginTiltCalibration,350)}});
     }
     playBtn.onclick=async()=>{
+      if(!networkJoined){toast(isHost?"ROOM IS STILL STARTING":"WAITING FOR HOST");return}
       if(isPhone){ensureDriveAudio();audioCtx?.resume();if(!await enableMobileTilt(false))return}
       started=true;practice=remotes.size===0;bot.mesh.visible=practice;menu.classList.add("hidden");hud.classList.add("live");mobileControls.classList.toggle("live",isPhone);
       if(!isPhone){ensureDriveAudio();audioCtx?.resume()}if(isHost)resetKickoff();setStatus();
