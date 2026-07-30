@@ -14,13 +14,17 @@
       radial-gradient(circle at 24% 30%,rgba(41,200,255,.16),transparent 32%),
       radial-gradient(circle at 78% 65%,rgba(255,122,36,.12),transparent 34%),
       linear-gradient(145deg,rgba(2,7,17,.72),rgba(2,7,17,.94));backdrop-filter:blur(7px)}
-    #menu.hidden{display:none}.panel{width:min(680px,calc(100vw - 30px));padding:34px;border:1px solid rgba(255,255,255,.14);background:linear-gradient(150deg,rgba(12,27,48,.96),rgba(4,11,22,.96));box-shadow:0 30px 100px #000}
+    #menu.hidden{display:none}.panel{width:min(720px,calc(100vw - 30px));max-height:calc(100dvh - 24px);overflow:auto;padding:30px 34px;border:1px solid rgba(255,255,255,.14);background:linear-gradient(150deg,rgba(12,27,48,.96),rgba(4,11,22,.96));box-shadow:0 30px 100px #000}
     .eyebrow{color:var(--lime);font-size:10px;font-weight:900;letter-spacing:.32em}h1{font-size:clamp(46px,9vw,88px);line-height:.83;letter-spacing:-.07em;margin:14px 0 20px;font-weight:950}h1 span{color:var(--blue)}
     .intro{max-width:570px;color:#b7c4d5;line-height:1.55;margin:0 0 22px}.actions{display:flex;gap:9px;flex-wrap:wrap}
     button{border:0;padding:13px 18px;font-weight:850;letter-spacing:.055em;cursor:pointer;transition:.16s}.primary{background:var(--lime);color:#071104;box-shadow:0 0 26px rgba(184,255,92,.2)}.primary:hover{transform:translateY(-2px);box-shadow:0 0 34px rgba(184,255,92,.34)}.primary:disabled{opacity:.4;cursor:wait;transform:none;box-shadow:none}
     .secondary{color:#eef7ff;background:#172841;border:1px solid #29405f}.secondary:hover{background:#203653}.secondary:disabled{opacity:.35;cursor:not-allowed}
     .cameraOptions{display:flex;align-items:center;gap:8px;margin-top:14px;color:#7890ab;font:800 10px/1 ui-monospace,monospace;letter-spacing:.16em}.cameraOptions button{padding:8px 11px;font-size:10px}.cameraOptions button.active{color:#071104;background:var(--lime);border-color:var(--lime)}
-    #inviteRow,#joinRow{display:none;gap:8px;margin-top:10px}input{min-width:0;flex:1;padding:11px;background:#030914;border:1px solid #263b58;color:#b9cce2;font-family:ui-monospace,monospace}
+    #lobbyBtn,#inviteRow,#joinRow{display:none}#inviteRow,#joinRow{gap:8px;margin-top:10px}input{min-width:0;flex:1;padding:11px;background:#030914;border:1px solid #263b58;color:#b9cce2;font-family:ui-monospace,monospace}
+    .menuSettings{display:grid;grid-template-columns:minmax(150px,.75fr) minmax(260px,1.25fr);gap:10px;margin-top:14px}.setting{display:block;padding:10px 12px;background:rgba(2,8,18,.55);border:1px solid #243a55;color:#7890ab;font:800 9px/1 ui-monospace,monospace;letter-spacing:.14em}.setting input[type=text]{display:block;width:100%;margin-top:8px;padding:8px}.rangeLine{display:grid;grid-template-columns:1fr 48px;gap:10px;align-items:center;margin-top:9px}.setting input[type=range]{width:100%;padding:0;accent-color:var(--lime)}#steerValue{text-align:right;color:var(--lime);font-size:11px}
+    #lobbyPanel{margin-top:14px;border:1px solid #29425e;background:rgba(2,8,17,.7)}.lobbyHead{display:flex;justify-content:space-between;gap:12px;padding:9px 11px;border-bottom:1px solid #243a55;color:var(--lime);font:900 10px/1 ui-monospace,monospace;letter-spacing:.16em}.lobbyHead span:last-child{color:#8fa8c2;text-align:right}
+    #chatLog{height:112px;overflow:auto;padding:8px 11px;font:11px/1.45 ui-monospace,monospace;color:#c6d6e7}.chatLine{overflow-wrap:anywhere}.chatLine b{color:#69d7ff;margin-right:7px}.chatLine.own b{color:var(--lime)}.chatLine.system{color:#718ba7;font-style:italic}.chatLine.system b{color:#718ba7}
+    #chatForm{display:flex;gap:8px;padding:8px;border-top:1px solid #243a55}#chatForm input{padding:9px}#chatForm button{padding:9px 13px}
     .fine{font-size:11px;line-height:1.65;color:#778da8;margin:18px 0 0}kbd{padding:2px 5px;border:1px solid #38506d;background:#102039;color:#dcecff}
     #hud{position:fixed;inset:0;z-index:8;display:none;pointer-events:none;text-shadow:0 2px 8px #000}#hud.live{display:block}
     #scorebar{position:absolute;top:18px;left:50%;transform:translateX(-50%);display:grid;grid-template-columns:70px 94px 70px;align-items:center;text-align:center;font-weight:950}
@@ -35,28 +39,28 @@
     #ballCam{position:absolute;left:50%;bottom:27px;transform:translateX(-50%);font:900 11px/1 ui-monospace,monospace;letter-spacing:.18em;color:#fff;background:rgba(4,11,22,.7);padding:8px 11px;border:1px solid rgba(255,255,255,.12)}
     #toast{position:fixed;z-index:40;left:50%;top:14%;transform:translateX(-50%) translateY(-8px);opacity:0;transition:.18s;background:#081626;border:1px solid #33506c;padding:10px 13px;color:#dcecff;font-size:12px}#toast.show{opacity:1;transform:translateX(-50%)}
     #net{position:absolute;left:22px;top:22px;width:240px;font:10px/1.45 ui-monospace,monospace;color:#819ab6}.dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:7px;background:#ffd25b;box-shadow:0 0 9px currentColor}.dot.ok{background:#67ff9a}.dot.bad{background:#ff5f75}
-    #controls{position:absolute;right:20px;top:22px;text-align:right;font:10px/1.65 ui-monospace,monospace;color:#7c91aa}
+    #controls{position:absolute;right:20px;top:22px;text-align:right;font:10px/1.65 ui-monospace,monospace;color:#7c91aa}#gameMenuBtn{position:absolute;right:20px;top:154px;pointer-events:auto;padding:9px 12px;color:#d8e9fa;background:rgba(4,14,28,.72);border:1px solid rgba(255,255,255,.22);font:850 10px/1 ui-monospace,monospace}
     #mobileIntro,#mobileControls,#launchCenter{display:none}
     #mobileControls{position:fixed;inset:0;z-index:14;pointer-events:none;touch-action:none}
     .mobileAction,.mobileUtility{position:absolute;pointer-events:auto;touch-action:none;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent}
     .mobileAction{top:max(118px,calc(env(safe-area-inset-top) + 92px));width:94px;height:94px;border-radius:50%;padding:0;color:#fff;border:2px solid rgba(255,255,255,.5);background:rgba(5,18,34,.64);box-shadow:0 10px 34px rgba(0,0,0,.45),inset 0 0 22px rgba(255,255,255,.08);font-size:13px;backdrop-filter:blur(5px)}
     .mobileAction.pressed{transform:scale(.94);filter:brightness(1.45)}#mobileBoost{left:max(18px,env(safe-area-inset-left));border-color:rgba(255,153,55,.8);color:#ffbd73}#mobileJump{right:max(18px,env(safe-area-inset-right));border-color:rgba(176,255,104,.8);color:#d2ff9f}
     .mobileUtility{bottom:max(82px,calc(env(safe-area-inset-bottom) + 66px));padding:10px 12px;border-radius:18px;background:rgba(4,14,28,.7);border:1px solid rgba(255,255,255,.24);color:#c9ddf2;font:800 10px/1 ui-monospace,monospace;letter-spacing:.08em}
-    #mobileRecenter{left:50%;transform:translateX(-50%)}#mobileCamera{right:max(16px,env(safe-area-inset-right))}
+    #mobileMenu{left:max(16px,env(safe-area-inset-left))}#mobileRecenter{left:50%;transform:translateX(-50%)}#mobileCamera{right:max(16px,env(safe-area-inset-right))}
     #tiltStatus{position:absolute;left:50%;bottom:max(132px,calc(env(safe-area-inset-bottom) + 116px));transform:translateX(-50%);min-width:170px;text-align:center;color:#9db6cf;font:800 9px/1.35 ui-monospace,monospace;letter-spacing:.12em;text-shadow:0 2px 6px #000}
     #tiltStatus.ready{color:var(--lime)}
     body.mobile{touch-action:none}body.mobile #mobileIntro{display:block;margin-top:16px;padding:12px 14px;background:rgba(41,200,255,.08);border:1px solid rgba(41,200,255,.24);color:#a9c6df;font-size:12px;line-height:1.5}
     body.mobile #mobileIntro strong{display:block;color:#dff5ff;letter-spacing:.06em;margin-bottom:4px}body.mobile #launchCenter{display:block;width:100%;margin-top:10px;padding:10px}body.mobile #mobileControls.live{display:block}
     body.mobile .panel{width:min(520px,calc(100vw - 22px));max-height:calc(100dvh - 20px);overflow:auto;padding:21px}body.mobile h1{font-size:clamp(48px,17vw,76px)}body.mobile .fine{display:none}
-    body.mobile #net,body.mobile #controls{display:none}body.mobile #status{top:74px;white-space:nowrap}body.mobile #scorebar{top:max(10px,env(safe-area-inset-top));grid-template-columns:56px 76px 56px}.mobile .score{font-size:27px;padding:5px}.mobile #clock{font-size:14px;padding:10px 5px}
+    body.mobile #net,body.mobile #controls,body.mobile #gameMenuBtn{display:none}body.mobile #status{top:74px;white-space:nowrap}body.mobile #scorebar{top:max(10px,env(safe-area-inset-top));grid-template-columns:56px 76px 56px}.mobile .score{font-size:27px;padding:5px}.mobile #clock{font-size:14px;padding:10px 5px}
     body.mobile #bottom{left:15px;right:15px;bottom:max(15px,env(safe-area-inset-bottom))}body.mobile #boost{width:90px;height:90px}body.mobile #boostValue{font-size:30px}body.mobile #boostLabel{top:59px}body.mobile #speed strong{font-size:35px}body.mobile #ballCam{bottom:max(18px,env(safe-area-inset-bottom));font-size:9px}
     @media(orientation:landscape) and (pointer:coarse){
       body.mobile .panel{width:min(780px,calc(100vw - 20px));max-height:calc(100dvh - 14px);padding:15px 20px}body.mobile h1{font-size:46px;margin:8px 0 12px}body.mobile .intro{margin-bottom:12px;font-size:12px}
       body.mobile .mobileAction{top:50%;width:86px;height:86px;transform:translateY(-50%)}body.mobile .mobileAction.pressed{transform:translateY(-50%) scale(.94)}
-      body.mobile .mobileUtility{bottom:max(12px,env(safe-area-inset-bottom))}body.mobile #mobileCamera{right:118px}body.mobile #tiltStatus{bottom:max(55px,calc(env(safe-area-inset-bottom) + 42px))}
+      body.mobile .mobileUtility{bottom:max(12px,env(safe-area-inset-bottom))}body.mobile #mobileMenu{left:118px}body.mobile #mobileCamera{right:118px}body.mobile #tiltStatus{bottom:max(55px,calc(env(safe-area-inset-bottom) + 42px))}
       body.mobile #ballCam{display:none}body.mobile #status{top:57px}body.mobile #bottom{bottom:max(8px,env(safe-area-inset-bottom))}
     }
-    @media(max-width:700px){.panel{padding:23px}.fine{font-size:10px}#controls,#net{display:none}#bottom{left:18px;right:18px}#boost{width:104px;height:104px}#boostValue{font-size:34px}#boostLabel{top:67px}}
+    @media(max-width:700px){.panel{padding:23px}.menuSettings{grid-template-columns:1fr}.fine{font-size:10px}#controls,#net{display:none}#bottom{left:18px;right:18px}#boost{width:104px;height:104px}#boostValue{font-size:34px}#boostLabel{top:67px}}
   </style>
 </head>
 <body>
@@ -68,12 +72,22 @@
       <p class="intro" id="menuText">A compact car-soccer arena with fixed-step physics, boost, powerslides, double jumps, dodges, aerial control, wall reads, and host-authoritative scoring.</p>
       <div class="actions">
         <button type="button" class="primary" id="playBtn">PLAY</button>
+        <button type="button" class="secondary" id="lobbyBtn">RETURN TO LOBBY</button>
         <button type="button" class="secondary" id="copyBtn" disabled>COPY INVITE</button>
         <button type="button" class="secondary" id="joinOpenBtn">JOIN ROOM</button>
       </div>
       <div id="inviteRow"><input type="text" id="invite" readonly><button type="button" class="secondary" id="copySmall">COPY</button></div>
       <div id="joinRow"><input type="text" id="joinCode" placeholder="PASTE ROOM CODE OR INVITE"><button type="button" class="secondary" id="joinBtn">JOIN</button></div>
       <div class="cameraOptions"><span>CAMERA</span><button type="button" class="secondary active" id="ballCamBtn">FACE BALL</button><button type="button" class="secondary" id="followCamBtn">3RD-PERSON FOLLOW</button></div>
+      <div class="menuSettings">
+        <label class="setting">CALLSIGN<input type="text" id="playerName" maxlength="16" autocomplete="nickname" placeholder="PLAYER"></label>
+        <label class="setting">STEERING SENSITIVITY<div class="rangeLine"><input type="range" id="steerSensitivity" min="0.70" max="2.50" step="0.05" value="1.70"><output id="steerValue" for="steerSensitivity">170%</output></div></label>
+      </div>
+      <div id="lobbyPanel">
+        <div class="lobbyHead"><span>LOBBY CHAT</span><span id="lobbyState">CONNECTING</span></div>
+        <div id="chatLog" aria-live="polite"><div class="chatLine system"><b>SYSTEM</b> Room chat is ready.</div></div>
+        <form id="chatForm"><input type="text" id="chatInput" maxlength="180" autocomplete="off" placeholder="MESSAGE THE LOBBY"><button type="submit" class="secondary">SEND</button></form>
+      </div>
       <div id="mobileIntro"><strong>TILT CONTROLS</strong>Hold the phone comfortably in portrait or landscape, then center it. Tilt to drive; after jumping, pitch and yaw are relative to your takeoff pose. A sideways second jump performs a roll dodge.
         <button type="button" class="secondary" id="launchCenter">CENTER CURRENT POSITION</button>
       </div>
@@ -86,6 +100,7 @@
     <div id="centerMessage"></div>
     <div id="net"></div>
     <div id="controls">↑ ↓ · THROTTLE / PITCH / DODGE<br>← → · STEER / YAW / SIDE DODGE<br>A D · AIR ROLL<br>SHIFT · BOOST &nbsp; SPACE · JUMP<br>C / F · CAMERA &nbsp; M / ESC · MENU<br><span id="fovReadout">FOV · 86°</span></div>
+    <button type="button" id="gameMenuBtn">MENU · ESC</button>
     <div id="bottom"><div id="speed"><strong>0</strong><span>KM/H</span></div><div id="boost"><span id="boostValue">100</span><span id="boostLabel">BOOST</span></div></div>
     <div id="ballCam">BALL CAM · ON</div>
   </div>
@@ -93,6 +108,7 @@
     <button type="button" class="mobileAction" id="mobileBoost" aria-label="Hold to boost">BOOST</button>
     <button type="button" class="mobileAction" id="mobileJump" aria-label="Jump or dodge">JUMP</button>
     <div id="tiltStatus">TILT NOT CALIBRATED</div>
+    <button type="button" class="mobileUtility" id="mobileMenu">MENU</button>
     <button type="button" class="mobileUtility" id="mobileRecenter">RECENTER TILT</button>
     <button type="button" class="mobileUtility" id="mobileCamera">FOLLOW CAM</button>
   </div>
@@ -105,18 +121,23 @@
     "use strict";
     const $=s=>document.querySelector(s), clamp=(v,a,b)=>Math.max(a,Math.min(b,v)), lerp=(a,b,t)=>a+(b-a)*t;
     const menu=$("#menu"),loading=$("#loading"),hud=$("#hud"),playBtn=$("#playBtn"),copyBtn=$("#copyBtn"),copySmall=$("#copySmall"),
-      joinOpenBtn=$("#joinOpenBtn"),joinBtn=$("#joinBtn"),joinRow=$("#joinRow"),joinCode=$("#joinCode"),inviteRow=$("#inviteRow"),invite=$("#invite"),
+      lobbyBtn=$("#lobbyBtn"),joinOpenBtn=$("#joinOpenBtn"),joinBtn=$("#joinBtn"),joinRow=$("#joinRow"),joinCode=$("#joinCode"),inviteRow=$("#inviteRow"),invite=$("#invite"),
       ballCamBtn=$("#ballCamBtn"),followCamBtn=$("#followCamBtn"),
       menuText=$("#menuText"),blueScoreEl=$("#blueScore"),orangeScoreEl=$("#orangeScore"),clockEl=$("#clock"),centerMessage=$("#centerMessage"),
       netDot=$("#netDot"),roomState=$("#roomState"),netEl=$("#net"),speedEl=$("#speed strong"),boostEl=$("#boost"),boostValue=$("#boostValue"),fovReadout=$("#fovReadout"),
       ballCamEl=$("#ballCam"),toastEl=$("#toast"),mobileControls=$("#mobileControls"),mobileBoost=$("#mobileBoost"),mobileJump=$("#mobileJump"),
-      mobileRecenter=$("#mobileRecenter"),mobileCamera=$("#mobileCamera"),tiltStatus=$("#tiltStatus"),launchCenter=$("#launchCenter");
+      mobileMenu=$("#mobileMenu"),mobileRecenter=$("#mobileRecenter"),mobileCamera=$("#mobileCamera"),tiltStatus=$("#tiltStatus"),launchCenter=$("#launchCenter"),
+      gameMenuBtn=$("#gameMenuBtn"),playerName=$("#playerName"),steerSensitivity=$("#steerSensitivity"),steerValue=$("#steerValue"),
+      lobbyState=$("#lobbyState"),chatLog=$("#chatLog"),chatForm=$("#chatForm"),chatInput=$("#chatInput");
     if(!window.THREE||!window.Peer){loading.textContent="ENGINE LOAD FAILED — INTERNET REQUIRED ON FIRST OPEN";return}
     const isPhone=navigator.userAgentData?.mobile===true||/Android.+Mobile|iPhone|iPod|Windows Phone/i.test(navigator.userAgent)||
       (navigator.maxTouchPoints>1&&Math.min(innerWidth,innerHeight)<=600&&matchMedia("(pointer:coarse)").matches);
     const mobileInput={enabled:false,listening:false,calibrated:false,calibrating:false,boost:false,jump:false,jumpQueued:false,throttle:0,steer:0,
       neutralBeta:0,neutralGamma:0,smoothBeta:0,smoothGamma:0,screenForward:0,screenRight:0,airOriginForward:0,airOriginRight:0,airReferenced:false,
       samples:0,sumBeta:0,sumGamma:0,lastEvent:0,lastHud:0};
+    let steeringSensitivity=1.7;
+    try{steeringSensitivity=clamp(Number(localStorage.getItem("wreckSteering"))||1.7,.7,2.5);playerName.value=(localStorage.getItem("wreckCallsign")||"").slice(0,16)}catch(e){}
+    steerSensitivity.value=steeringSensitivity.toFixed(2);steerValue.textContent=Math.round(steeringSensitivity*100)+"%";
     document.body.classList.toggle("mobile",isPhone);if(isPhone)playBtn.textContent="ENABLE TILT & PLAY";
 
     // Rocket League measurements, scaled from Unreal units at 100 uu = 1 world unit.
@@ -326,7 +347,7 @@
     }
     const local=newCar(0,"local");let myId="",myTeam=0;
     const ball={pos:new V3(0,BALL_R,0),vel:new V3(),ang:new V3(.3,0,.25),lastHost:new V3(),lastHit:0,inGoal:0};
-    const remotes=new Map();const keys={};let jumpPressed=false,ballCam=true,started=false,practice=true,kickoff=3,matchTime=180,gameOver=false,overtime=false,lastClockSecond=180;
+    const remotes=new Map();const keys={};let jumpPressed=false,ballCam=true,started=false,inLobby=true,practice=true,kickoff=3,matchTime=180,gameOver=false,overtime=false,lastClockSecond=180,endLobbyTimer=0,goalResetTimer=0,lastLobbyNotice="";
     let blueScore=0,orangeScore=0,lastFrame=performance.now(),accumulator=0,sendTimer=0,ballSendTimer=0,netTimer=0,frame=0,camYaw=0,camPitch=.18,cameraShake=0;
     let audioCtx,driveAudio=null,peer,hostConn=null,isHost=true,hostId="",connectedPeers=new Map(),localFile=location.protocol==="file:",rtt=0,pingAt=0,
       networkJoined=false,networkEpoch=0,reconnectTimer=0,reconnectAttempts=0;
@@ -341,14 +362,14 @@
       if(c===local){mobileInput.airReferenced=false;const facing=forward(c,new V3()).setY(0);if(facing.lengthSq()>.001)followForward.copy(facing.normalize())}
       syncCarMesh(c);
     }
-    function resetKickoff(){
+    function resetKickoff(startMatch=false){
       ball.pos.set(0,BALL_R,0);ball.vel.set(0,0,0);ball.ang.set(.2,0,.3);ball.inGoal=0;
       const cars=[local,...remotes.values(),...(practice&&!remotes.size?[bot]:[])],teamSlots={0:[0,1],1:[2,3]};
       if(Math.random()<.5)teamSlots[0].reverse();if(Math.random()<.5)teamSlots[1].reverse();
       const used={0:0,1:0},spawns={};cars.forEach(c=>{const list=teamSlots[c.team],slot=list[used[c.team]++%2];spawnCar(c,slot);spawns[c.id||"local"]=slot});
       ballMesh.position.copy(ball.pos);shadow.position.set(0,.022,0);updateBallPrediction();
       kickOffSound(3);kickoff=3;gameOver=false;lastClockSecond=Math.ceil(matchTime);announce("3",900);
-      if(isHost)broadcast({t:"reset",ball:packBall(),blueScore,orangeScore,matchTime,kickoff,spawns});
+      if(isHost)broadcast({t:"reset",ball:packBall(),blueScore,orangeScore,matchTime,kickoff,spawns,startMatch});
     }
     spawnCar(local);spawnCar(bot);bot.mesh.visible=true;
 
@@ -514,7 +535,7 @@
         else fs+=input.throttle*throttleAccel(fs)*dt;
         if(boostRequested){fs+=BOOST_ACCEL_GROUND*boostPower*dt;c.boost=Math.max(0,c.boost-BOOST_DRAIN*boostBurn*dt);c.lastBoostAt=now}
         const grip=impactSliding ? .28 : (input.slide?2.8:12);ss*=Math.exp(-grip*dt);
-        const speedUU=Math.abs(fs)*100,turn=curvature(speedUU)*speedUU*input.steer*Math.sign(fs||input.throttle||1);
+        const speedUU=Math.abs(fs)*100,turn=curvature(speedUU)*speedUU*input.steer*steeringSensitivity*Math.sign(fs||input.throttle||1);
         const steerScale=input.slide?1.42:1;tmpQ.setFromAxisAngle(surfaceUp,-turn*steerScale*dt);c.q.premultiply(tmpQ).normalize();
         c.vel.copy(ff).multiplyScalar(fs).addScaledVector(rr,ss);
         tmpC.set(0,-G,0).addScaledVector(surfaceUp,G*surfaceUp.y);c.vel.addScaledVector(tmpC,dt);capVelocity(c.vel,impactSliding?MAX_CAR*1.22:MAX_CAR);
@@ -693,11 +714,63 @@
       if(team===0)blueScore++;else orangeScore++;updateScore();announce((team===0?"BLUE":"ORANGE")+" SCORES",2100);audio(64,.7,"sawtooth",.09);
       particleBurst(ball.pos,team===0?0x3bcaff:0xff792f,70,14,1.25,new V3(0,3,0));
       broadcast({t:"goal",team,blueScore,orangeScore,matchTime,overtime});kickoff=99;
-      if(overtime){gameOver=true;setTimeout(()=>announce((team===0?"BLUE":"ORANGE")+" WINS",4000),1600)}
-      else setTimeout(()=>resetKickoff(),2200);
+      clearTimeout(goalResetTimer);
+      if(overtime){gameOver=true;goalResetTimer=setTimeout(()=>finishMatch((team===0?"BLUE":"ORANGE")+" WINS"),1500)}
+      else goalResetTimer=setTimeout(()=>{goalResetTimer=0;if(started&&!inLobby&&!gameOver)resetKickoff()},2200);
     }
     function updateScore(){blueScoreEl.textContent=blueScore;orangeScoreEl.textContent=orangeScore}
     function announce(text,dur=1000){centerMessage.textContent=text;centerMessage.classList.add("show");clearTimeout(announce.timer);announce.timer=setTimeout(()=>centerMessage.classList.remove("show"),dur)}
+    function updateLobbyState(){
+      const n=remotes.size+1;
+      if(!networkJoined)lobbyState.textContent="CONNECTING";
+      else if(started&&!inLobby&&!gameOver)lobbyState.textContent="MATCH LIVE · "+n+" PLAYER"+(n===1?"":"S");
+      else lobbyState.textContent=(isHost?"HOST CAN START":"WAITING FOR HOST")+" · "+n+" PLAYER"+(n===1?"":"S");
+    }
+    function updateMenuControls(){
+      const live=started&&!inLobby&&!gameOver;lobbyBtn.style.display=live&&isHost?"inline-block":"none";
+      if(live){playBtn.disabled=false;playBtn.textContent="RESUME MATCH"}
+      else if(!networkJoined){playBtn.disabled=true;playBtn.textContent="CONNECTING…"}
+      else if(isHost){playBtn.disabled=false;playBtn.textContent=gameOver?"START NEW MATCH":"START MATCH"}
+      else{playBtn.disabled=true;playBtn.textContent="WAITING FOR HOST"}
+      updateLobbyState();
+    }
+    function resumeMatch(){
+      if(!started||inLobby||gameOver)return;
+      menu.classList.add("hidden");hud.classList.add("live");mobileControls.classList.toggle("live",isPhone);updateMenuControls();
+    }
+    function openGameMenu(){
+      if(!started||inLobby){menu.classList.remove("hidden");updateMenuControls();return}
+      for(const k in keys)keys[k]=false;local.input.jump=false;mobileInput.boost=mobileInput.jump=false;
+      menuText.textContent="The match remains live while this menu is open. Adjust controls, chat, or resume.";
+      menu.classList.remove("hidden");mobileControls.classList.remove("live");updateMenuControls();
+    }
+    function enterMatchView(){
+      clearTimeout(endLobbyTimer);endLobbyTimer=0;clearTimeout(goalResetTimer);goalResetTimer=0;
+      started=true;inLobby=false;gameOver=false;practice=remotes.size===0;bot.mesh.visible=practice;
+      menu.classList.add("hidden");hud.classList.add("live");mobileControls.classList.toggle("live",isPhone);updateMenuControls();setStatus();
+    }
+    function enterLobby(reason="",broadcastEvent=false){
+      clearTimeout(endLobbyTimer);endLobbyTimer=0;clearTimeout(goalResetTimer);goalResetTimer=0;
+      started=false;inLobby=true;kickoff=99;menu.classList.remove("hidden");hud.classList.remove("live");mobileControls.classList.remove("live");
+      menuText.textContent=isHost?"Lobby ready. Start the next match when everyone is set.":"Lobby ready. Waiting for the host to start the next match.";
+      if(reason&&reason!==lastLobbyNotice){lastLobbyNotice=reason;appendChat("SYSTEM",reason,false,true)}
+      if(broadcastEvent&&isHost)broadcast({t:"lobby",reason,blueScore,orangeScore});
+      updateMenuControls();setStatus();
+    }
+    function finishMatch(label,broadcastEvent=isHost){
+      if(endLobbyTimer)return;gameOver=true;kickoff=99;announce(label,3600);
+      if(broadcastEvent&&isHost)broadcast({t:"matchEnd",label,blueScore,orangeScore,matchTime,overtime});
+      endLobbyTimer=setTimeout(()=>{endLobbyTimer=0;enterLobby(label+" · REMATCH READY",broadcastEvent&&isHost)},3800);
+    }
+    async function startHostMatch(){
+      if(!isHost||!networkJoined)return;
+      if(isPhone){ensureDriveAudio();audioCtx?.resume();if(!await enableMobileTilt(false))return}else{ensureDriveAudio();audioCtx?.resume()}
+      blueScore=0;orangeScore=0;matchTime=180;overtime=false;gameOver=false;lastClockSecond=180;updateScore();lastLobbyNotice="";
+      enterMatchView();resetKickoff(true);appendChat("SYSTEM","HOST STARTED A NEW MATCH",false,true);
+    }
+    function returnHostToLobby(){
+      if(!isHost)return;gameOver=true;enterLobby("HOST RETURNED EVERYONE TO THE LOBBY",true);
+    }
 
     function packCar(c){return{p:c.pos.toArray(),v:c.vel.toArray(),q:c.q.toArray(),b:c.boost,s:c.boostSpool,tm:c.team,g:c.onGround,d:c.demolished}}
     function unpackCar(c,d,target=true){
@@ -718,12 +791,28 @@
     const TRANSIENT_MESSAGES=new Set(["car","ball","game","ping","pong"]);
     function send(conn,msg){if(conn?.open&&(!TRANSIENT_MESSAGES.has(msg.t)||(conn.bufferSize||0)<12))conn.send(msg)}
     function broadcast(msg,except=""){connectedPeers.forEach((c,id)=>{if(id!==except)send(c,msg)})}
+    function callsign(){
+      const clean=playerName.value.replace(/[^\p{L}\p{N} _-]/gu,"").trim().slice(0,16);
+      return clean||(isHost?"HOST":myTeam===0?"BLUE PLAYER":"ORANGE PLAYER");
+    }
+    function appendChat(name,text,own=false,system=false){
+      name=String(name||"PLAYER").trim().slice(0,16);text=String(text||"").trim().slice(0,180);if(!text)return;
+      const line=document.createElement("div");line.className="chatLine"+(own?" own":"")+(system?" system":"");
+      const author=document.createElement("b");author.textContent=name;line.append(author,document.createTextNode(text));chatLog.append(line);
+      while(chatLog.children.length>60)chatLog.firstElementChild.remove();chatLog.scrollTop=chatLog.scrollHeight;
+    }
+    function postChat(){
+      const text=chatInput.value.trim().slice(0,180);if(!text)return;chatInput.value="";
+      if(!networkJoined){toast("CHAT CONNECTING");return}
+      const message={t:"chat",id:myId,n:callsign(),x:text};appendChat(message.n,message.x,true);
+      if(isHost)broadcast(message);else send(hostConn,message);
+    }
     function clearConnTimers(conn){
       if(!conn)return;clearTimeout(conn._openTimer);clearTimeout(conn._handshakeTimer);clearInterval(conn._helloTimer);
       conn._openTimer=conn._handshakeTimer=conn._helloTimer=0;
     }
     function setPlayAvailability(ready){
-      playBtn.disabled=!ready;playBtn.textContent=ready?(isPhone?"ENABLE TILT & PLAY":"PLAY"):"CONNECTING…";
+      if(!ready){playBtn.disabled=true;playBtn.textContent="CONNECTING…";updateLobbyState()}else updateMenuControls();
     }
     function finishHandshake(){
       networkJoined=true;reconnectAttempts=0;clearTimeout(reconnectTimer);reconnectTimer=0;clearConnTimers(hostConn);
@@ -736,17 +825,25 @@
           const blueHumans=1+[...remotes.values()].filter(x=>x.team===0).length,orangeHumans=[...remotes.values()].filter(x=>x.team===1).length;
           c=ensureRemote(from,blueHumans<=orangeHumans?0:1);
         }
-        const team=c.team;send(connectedPeers.get(from),{t:"welcome",v:2,id:from,team,host:myId,ball:packBall(),blueScore,orangeScore,matchTime,kickoff,spawnSlot:c.spawnSlot,
+        const team=c.team;send(connectedPeers.get(from),{t:"welcome",v:3,id:from,team,host:myId,ball:packBall(),blueScore,orangeScore,matchTime,kickoff,
+          started:started&&!inLobby,gameOver,overtime,inLobby,spawnSlot:c.spawnSlot,
           cars:[{id:myId,team:myTeam,...packCar(local)},...[...remotes.values()].filter(x=>x.id!==from).map(x=>({id:x.id,team:x.team,...packCar(x)}))]});
         if(joining)broadcast({t:"join",id:from,team},from);setStatus();
       }else if(d.t==="welcome"&&!isHost&&from===hostId){
         if(networkJoined)return;finishHandshake();
-        myId=d.id;myTeam=d.team;local.id=myId;local.team=myTeam;unpackBall(d.ball,true);blueScore=d.blueScore;orangeScore=d.orangeScore;matchTime=d.matchTime;kickoff=d.kickoff;updateScore();
+        const hostLive=!!d.started&&!d.inLobby&&!d.gameOver;
+        myId=d.id;myTeam=d.team;local.id=myId;local.team=myTeam;unpackBall(d.ball,true);blueScore=d.blueScore;orangeScore=d.orangeScore;matchTime=d.matchTime;kickoff=d.kickoff;
+        gameOver=!!d.gameOver;overtime=!!d.overtime;updateScore();
         const liveIds=new Set(d.cars.map(x=>x.id));for(const id of [...remotes.keys()])if(!liveIds.has(id))removeRemote(id);
         for(const x of d.cars){const c=ensureRemote(x.id,x.team);unpackCar(c,x,false);c.targetPos.copy(c.pos);c.targetQ.copy(c.q)}
         spawnCar(local,d.spawnSlot);connected();resetLocalMaterial();
-      }else if(d.t==="join"){ensureRemote(d.id,d.team);setStatus()}
-      else if(d.t==="leave")removeRemote(d.id);
+        if(hostLive)enterMatchView();else{started=false;inLobby=true;menu.classList.remove("hidden");hud.classList.remove("live");updateMenuControls()}
+      }else if(d.t==="join"){ensureRemote(d.id,d.team);appendChat("SYSTEM","A PLAYER JOINED THE ROOM",false,true);setStatus()}
+      else if(d.t==="leave"){removeRemote(d.id);appendChat("SYSTEM","A PLAYER LEFT THE ROOM",false,true);setStatus()}
+      else if(d.t==="chat"){
+        const text=String(d.x||"").trim().slice(0,180),name=String(d.n||"PLAYER").trim().slice(0,16);if(!text)return;
+        appendChat(name,text,d.id===myId);if(isHost)broadcast({t:"chat",id:from,n:name,x:text},from);
+      }
       else if(d.t==="car"){
         const c=ensureRemote(d.id,d.team);unpackCar(c,d,true);if(isHost)broadcast(d,from);
       }else if(d.t==="ball"&&!isHost){unpackBall(d)}
@@ -767,16 +864,23 @@
       else if(d.t==="reset"){
         unpackBall(d.ball,true);blueScore=d.blueScore;orangeScore=d.orangeScore;matchTime=d.matchTime;kickoff=d.kickoff;lastClockSecond=Math.ceil(matchTime);updateScore();
         for(const c of [local,...remotes.values(),bot]){const slot=d.spawns?.[c.id];if(Number.isFinite(slot))spawnCar(c,slot)}
+        if(d.startMatch){gameOver=false;overtime=false;enterMatchView();appendChat("SYSTEM","HOST STARTED A NEW MATCH",false,true)}
         announce("3",900);kickOffSound(3);
       }
-      else if(d.t==="game"){matchTime=d.matchTime;kickoff=d.kickoff;blueScore=d.blueScore;orangeScore=d.orangeScore;updateScore()}
+      else if(d.t==="matchEnd"){
+        blueScore=d.blueScore;orangeScore=d.orangeScore;matchTime=d.matchTime;overtime=!!d.overtime;updateScore();finishMatch(String(d.label||"MATCH COMPLETE").slice(0,40),false);
+      }
+      else if(d.t==="lobby"){
+        blueScore=d.blueScore;orangeScore=d.orangeScore;gameOver=true;updateScore();enterLobby(String(d.reason||"RETURNED TO LOBBY").slice(0,80),false);
+      }
+      else if(d.t==="game"){matchTime=d.matchTime;kickoff=d.kickoff;blueScore=d.blueScore;orangeScore=d.orangeScore;overtime=!!d.overtime;updateScore()}
       else if(d.t==="ping")send(isHost?connectedPeers.get(from):hostConn,{t:"pong",n:d.n})
       else if(d.t==="pong"){rtt=Date.now()-d.n;netDot.className="dot ok";setStatus()}
     }
     function beginClientHandshake(conn){
       if(isHost||conn!==hostConn)return;
       networkJoined=false;netDot.className="dot";setStatus("HANDSHAKING");menuText.textContent="Peer link open. Synchronizing with the host…";
-      const hello=()=>{if(conn===hostConn&&conn.open&&!networkJoined)send(conn,{t:"hello",v:2})};
+      const hello=()=>{if(conn===hostConn&&conn.open&&!networkJoined)send(conn,{t:"hello",v:3})};
       hello();conn._helloTimer=setInterval(hello,450);
       conn._handshakeTimer=setTimeout(()=>{
         if(conn===hostConn&&!networkJoined){roomState.textContent="HANDSHAKE TIMEOUT";conn.close();scheduleClientReconnect("HANDSHAKE TIMEOUT")}
@@ -805,7 +909,7 @@
     function connectToHost(active,epoch){
       if(epoch!==networkEpoch||isHost||networkJoined||!active||active.destroyed||active.disconnected)return;
       if(hostConn&&!hostConn.open){const stale=hostConn;hostConn=null;clearConnTimers(stale);try{stale.close()}catch(e){}}
-      const conn=active.connect(hostId,{reliable:true,serialization:"json",metadata:{game:"wreck-it-lag",v:2}});
+      const conn=active.connect(hostId,{reliable:true,serialization:"json",metadata:{game:"wreck-it-lag",v:3}});
       hostConn=conn;setStatus(reconnectAttempts?"RECONNECTING":"CONNECTING TO HOST");setupConn(conn,hostId);
     }
     function scheduleClientReconnect(reason="RECONNECTING"){
@@ -839,13 +943,14 @@
     }
     function connected(){
       finishHandshake();netDot.className="dot ok";invite.value=localFile?hostId:location.href;inviteRow.style.display="flex";copyBtn.disabled=false;setPlayAvailability(true);setStatus();
-      if(localFile){copyBtn.textContent="COPY ROOM CODE";menuText.textContent=isHost?"Open this HTML on the other device, choose JOIN ROOM, and paste the room code.":"Connected and synchronized with the host. Ready to play."}
-      else if(!isHost)menuText.textContent="Connected and synchronized with the host. Ready to play.";
+      if(localFile){copyBtn.textContent="COPY ROOM CODE";menuText.textContent=isHost?"Open this HTML on the other device, choose JOIN ROOM, and paste the room code.":"Connected and synchronized. Waiting for the host to start."}
+      else if(!isHost)menuText.textContent="Connected and synchronized. Waiting for the host to start.";
     }
     function setStatus(detail=""){
       const n=remotes.size+1,mode=isHost?(networkJoined?"HOST":"HOST STARTING"):(networkJoined?"P2P":"CONNECTING");
       roomState.textContent=detail||(mode+" · "+n+" PLAYER"+(n===1?"":"S")+(rtt&&networkJoined?" · "+rtt+" MS":""));
       netEl.innerHTML=`<span class="dot ${netDot.className.includes("ok")?"ok":""}"></span>${isHost?"HOST AUTHORITY":networkJoined?"CLIENT PREDICTION":"AWAITING HOST STATE"}<br>${n} HUMAN${n===1?"":"S"}${bot.mesh.visible?" + ROOKIE BOT":""}`;
+      updateLobbyState();
     }
     function networkError(e,active,epoch){
       if(epoch!==networkEpoch||active!==peer)return;const type=e?.type||"unknown error";netDot.className="dot bad";setPlayAvailability(false);
@@ -856,7 +961,8 @@
     function joinRoom(){
       let code=joinCode.value.trim();if(code.includes("#"))code=decodeURIComponent(code.split("#").pop());if(!/^orbit-[a-z0-9]+$/i.test(code)){toast("INVALID ROOM");return}
       networkEpoch++;clearTimeout(reconnectTimer);reconnectTimer=0;const oldPeer=peer;peer=null;try{oldPeer?.destroy()}catch(e){}
-      connectedPeers.clear();remotes.forEach(c=>scene.remove(c.mesh));remotes.clear();hostId=code;isHost=false;networkJoined=false;location.hash=encodeURIComponent(code);initNetwork(false);
+      connectedPeers.clear();remotes.forEach(c=>scene.remove(c.mesh));remotes.clear();hostId=code;isHost=false;networkJoined=false;started=false;inLobby=true;gameOver=false;
+      hud.classList.remove("live");mobileControls.classList.remove("live");location.hash=encodeURIComponent(code);initNetwork(false);
       joinRow.style.display="none";menuText.textContent="Connecting to "+code+"…";
     }
     function resetLocalMaterial(){local.mesh.traverse(o=>{if(o.material===blueMat)o.material=orangeMat})}
@@ -882,13 +988,13 @@
         }
         if(isHost&&matchTime===0&&!overtime){
           if(blueScore===orangeScore){overtime=true;announce("OVERTIME",2200)}
-          else{gameOver=true;announce(blueScore>orangeScore?"BLUE WINS":"ORANGE WINS",4000)}
+          else finishMatch(blueScore>orangeScore?"BLUE WINS":"ORANGE WINS");
         }
       }
       sendTimer+=dt;if(sendTimer>=1/30&&myId){sendTimer=0;const d={t:"car",id:myId,team:myTeam,...packCar(local)};isHost?broadcast(d):send(hostConn,d)}
       if(isHost){ballSendTimer+=dt;if(ballSendTimer>=1/20){ballSendTimer=0;broadcast({t:"ball",...packBall()})}}
       netTimer+=dt;if(netTimer>=1.5){netTimer=0;const m={t:"ping",n:Date.now()};if(isHost)connectedPeers.forEach(c=>send(c,m));else send(hostConn,m);
-        if(isHost)broadcast({t:"game",matchTime,kickoff,blueScore,orangeScore})}
+        if(isHost)broadcast({t:"game",matchTime,kickoff,blueScore,orangeScore,overtime,gameOver,started:started&&!inLobby})}
       frame++;
     }
     function renderRemotes(dt){
@@ -999,6 +1105,7 @@
     if(isPhone){
       bindMobileHold(mobileBoost,"boost");bindMobileHold(mobileJump,"jump");
       launchCenter.addEventListener("click",async e=>{e.preventDefault();await enableMobileTilt(true)});
+      mobileMenu.addEventListener("pointerdown",e=>{e.preventDefault();openGameMenu()});
       mobileRecenter.addEventListener("pointerdown",async e=>{e.preventDefault();await enableMobileTilt(true)});
       mobileCamera.addEventListener("pointerdown",e=>{e.preventDefault();setCameraMode(!ballCam)});
       window.addEventListener("orientationchange",()=>setTimeout(()=>{if(mobileInput.enabled)beginTiltCalibration()},450));
@@ -1006,19 +1113,27 @@
         else if(mobileInput.enabled){setTiltListening(true);setTimeout(beginTiltCalibration,350)}});
     }
     playBtn.onclick=async()=>{
+      if(started&&!inLobby&&!gameOver){resumeMatch();return}
       if(!networkJoined){toast(isHost?"ROOM IS STILL STARTING":"WAITING FOR HOST");return}
-      if(isPhone){ensureDriveAudio();audioCtx?.resume();if(!await enableMobileTilt(false))return}
-      started=true;practice=remotes.size===0;bot.mesh.visible=practice;menu.classList.add("hidden");hud.classList.add("live");mobileControls.classList.toggle("live",isPhone);
-      if(!isPhone){ensureDriveAudio();audioCtx?.resume()}if(isHost)resetKickoff();setStatus();
+      if(!isHost){toast("HOST STARTS THE MATCH");return}
+      await startHostMatch();
     };
+    lobbyBtn.onclick=returnHostToLobby;gameMenuBtn.onclick=openGameMenu;
     copyBtn.onclick=copyInvite;copySmall.onclick=copyInvite;joinOpenBtn.onclick=()=>joinRow.style.display=joinRow.style.display==="flex"?"none":"flex";joinBtn.onclick=joinRoom;
     ballCamBtn.onclick=()=>setCameraMode(true);followCamBtn.onclick=()=>setCameraMode(false);
+    steerSensitivity.addEventListener("input",()=>{
+      steeringSensitivity=clamp(Number(steerSensitivity.value)||1.7,.7,2.5);steerValue.textContent=Math.round(steeringSensitivity*100)+"%";
+      try{localStorage.setItem("wreckSteering",steeringSensitivity.toFixed(2))}catch(e){}
+    });
+    playerName.addEventListener("change",()=>{playerName.value=callsign();try{localStorage.setItem("wreckCallsign",playerName.value)}catch(e){}});
+    chatForm.addEventListener("submit",e=>{e.preventDefault();postChat()});
     joinCode.addEventListener("keydown",e=>{if(e.key==="Enter")joinRoom()});
     document.addEventListener("keydown",e=>{
+      if(e.target?.matches?.("input,textarea")){if(e.key==="Escape")e.target.blur();return}
       keys[e.code]=true;if(["Space","ArrowUp","ArrowDown","ArrowLeft","ArrowRight"].includes(e.code))e.preventDefault();
       if(!e.repeat&&(e.code==="KeyC"||e.code==="KeyF"))setCameraMode(!ballCam);
       if(e.code==="KeyR"&&practice){resetKickoff();toast("KICKOFF RESET")}
-      if(started&&(e.code==="KeyM"||e.code==="Escape")){menu.classList.remove("hidden");hud.classList.remove("live")}
+      if(started&&!e.repeat&&(e.code==="KeyM"||e.code==="Escape")){e.preventDefault();menu.classList.contains("hidden")?openGameMenu():resumeMatch()}
     });
     document.addEventListener("keyup",e=>keys[e.code]=false);
     renderer.domElement.addEventListener("pointerdown",e=>{if(e.button===0)renderer.domElement.setPointerCapture?.(e.pointerId)});
